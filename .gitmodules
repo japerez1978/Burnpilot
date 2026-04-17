@@ -4,3 +4,6 @@
 [submodule "tools/claude-mem"]
 	path = tools/claude-mem
 	url = https://github.com/thedotmack/claude-mem.git
+[submodule "tools/uiux"]
+	path = tools/uiux
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
