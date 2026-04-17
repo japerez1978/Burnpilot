@@ -7,3 +7,6 @@
 [submodule "tools/uiux"]
 	path = tools/uiux
 	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+[submodule "tools/ecc"]
+	path = tools/ecc
+	url = https://github.com/affaan-m/everything-claude-code.git
