@@ -1,5 +1,5 @@
 {
-  "name": "@saas-burnrate/api",
+  "name": "@burnpilot/api",
   "private": true,
   "version": "0.1.0",
   "main": "dist/server.js",
@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@saas-burnrate/types": "*",
-    "@saas-burnrate/utils": "*",
+    "@burnpilot/types": "*",
+    "@burnpilot/utils": "*",
     "@supabase/supabase-js": "2.49.1",
     "cors": "^2.8.5",
     "express": "^4.21.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@saas-burnrate/types",
+  "name": "@burnpilot/types",
   "private": true,
   "version": "0.1.0",
   "type": "module",
