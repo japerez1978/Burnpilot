@@ -6,3 +6,6 @@ cmds = ["npm run build -w @saas-burnrate/api"]
 
 [start]
 cmd = "node apps/api/dist/server.js"
+
+[variables]
+PORT = "3000"
