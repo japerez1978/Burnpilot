@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { loadConfig } from './utils/config.js';
-import { log } from './utils/logger.js';
-import { healthRouter } from './routes/health.js';
+import { loadConfig } from './utils/config';
+import { log } from './utils/logger';
+import { healthRouter } from './routes/health';
 
 const config = loadConfig();
 const app = express();
