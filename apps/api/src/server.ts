@@ -27,7 +27,7 @@ app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Not found', code: 'NOT_FOUND' });
 });
 
-app.listen(config.PORT, () => {
+app.listen(config.PORT, '0.0.0.0', () => {
   log('info', 'server.started', {
     port: config.PORT,
     env: config.NODE_ENV,
