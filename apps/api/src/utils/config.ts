@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const ConfigSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.string().default('development'),
   LOG_LEVEL: z.enum(['info', 'warn', 'error']).default('info'),
   PORT: z.coerce.number().int().positive().default(3000),
   ALLOWED_ORIGIN: z.string().url().default('http://localhost:5173'),
