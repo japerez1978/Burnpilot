@@ -3,15 +3,17 @@
 > **Propósito:** handoff rápido entre herramientas, agentes o personas.  
 > **Mantenimiento:** ver § *Política de mantenimiento* al final (equilibrio eficacia / precisión).
 
-**Última actualización:** 2026-04-19
+**Última actualización:** 2026-04-20
 
 ---
 
 ## Resumen en una frase
 
-**Sprints 0–4** cerrados en repo y validados en local en la sesión 2026-04-19 (incl. borrado de cuenta extremo a extremo). **Sprint 5** (Stripe + gating) es el siguiente cuando se retome el desarrollo.
+**Sprints 0–4** cerrados en repo y validados en local (incl. borrado de cuenta extremo a extremo). **Sprint 5** (Stripe + gating) es el siguiente cuando se retome el desarrollo.
 
-**Nota de cierre (2026-04-19):** el fundador da por **pausado** el trabajo por sprints hasta nueva sesión; el estado operativo y el handoff quedan reflejados aquí y en [docs/handoff/LATEST.md](handoff/LATEST.md).
+**Repo GitHub:** `main` sincronizado con `origin` (commit `c2b95a4` y anteriores). Remoto: `https://github.com/japerez1978/burnpilot.git` — si GitHub avisa de redirect al nombre `Burnpilot.git`, se puede alinear con `git remote set-url origin <url_canónica>`.
+
+**Nota de cierre (2026-04-19):** el fundador dio por **pausado** el trabajo por sprints hasta nueva sesión; el handoff sigue en [docs/handoff/LATEST.md](handoff/LATEST.md).
 
 ---
 
@@ -44,9 +46,9 @@
 - `/` — home  
 - `/login`, `/register`, `/auth/forgot`, `/auth/reset`, `/auth/callback`  
 - `/onboarding` — primera vez (tras login si `onboarding_completed_at` es null)  
-- `/dashboard` — KPIs globales (`rpc dashboard_summary`) + alertas  
+- `/dashboard` — KPIs globales (`rpc dashboard_summary`) + alertas; tooltip del gráfico «Por categoría» con texto legible (label/item claros)  
 - `/projects/:id` — burn del proyecto + alertas (`rpc project_summary`)  
-- `/tools` — CRUD herramientas (requiere sesión)  
+- `/tools` — CRUD herramientas (requiere sesión): columna **Estado**, colores por estado, **filtro desplegable** multi-estado, coste mensual centrado, importe **0** o vacío = plan gratuito  
 - `/savings` — plan de ahorro (`rpc savings_plan`)  
 - `/settings/account` — perfil + **eliminar cuenta** (requiere API con service role)
 
@@ -54,7 +56,11 @@
 `20250418000001_init_profiles.sql` → `public.profiles`  
 `20250420000001_tools_projects_categories.sql` → catálogo + `projects`, `tools`, `project_tools`, etc.  
 `20250421000001_dashboard_rpc.sql` → RPC dashboard + helpers  
-`20250422000001_sprint4_alerts_savings.sql` → `compute_alerts`, `savings_plan`, alertas en RPCs, backfill onboarding
+`20250422000001_sprint4_alerts_savings.sql` → `compute_alerts`, `savings_plan`, alertas en RPCs, backfill onboarding  
+`20250423000001_expand_tool_categories.sql` → categorías 9–16 + plantillas  
+`20250424000001_category_frontend_deploy.sql` → categoría 17 «Frontend / despliegue» + plantillas Vercel/Netlify/CF  
+`20250425000001_tools_allow_zero_amount.sql` → `amount_cents >= 0` (planes free)  
+`20250426000001_ensure_category_front_deploy.sql` → idempotente por si faltó la 240 (categoría 17 + `UPDATE` plantillas)
 
 **API (Railway / local):** `DELETE /v1/account` — JWT en header; en servidor: purge ordenado de `tools` → `projects` → `profiles`, luego `auth.admin.deleteUser`. Variables: `apps/api/.env` cargado vía **`src/loadEnv.ts`** (varias rutas posibles según `cwd` del monorepo).
 
@@ -107,7 +113,7 @@ npm run dev                       # web + api (necesario para borrar cuenta)
 
 ## Bloqueos conocidos
 
-- Ninguno conocido en **local** tras QA 2026-04-19 (migraciones 18–22 aplicadas; borrado de cuenta verificado).  
+- Ninguno conocido en **local** si migraciones **18–26** están aplicadas en Supabase y borrado de cuenta verificado.  
 - **Producción:** API en Railway debe definir las mismas vars que en local; front debe usar `VITE_API_URL` apuntando al dominio de la API.
 
 ---

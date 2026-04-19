@@ -2,6 +2,11 @@
 
 > Qué hacer cuando algo falla. Se rellena con casos reales durante el desarrollo.
 
+## Git / GitHub
+
+- Remoto habitual: `https://github.com/japerez1978/burnpilot.git`. Si `git push` muestra aviso de *repository moved* hacia `Burnpilot.git`, puedes alinear: `git remote set-url origin https://github.com/japerez1978/Burnpilot.git`.
+- No commitear `.env` / `.env.local` (están en `.gitignore`). Obsidian bajo `docs/`: carpeta `.obsidian/` ignorada (`**/.obsidian/` en `.gitignore`).
+
 ## Dashboards / accesos
 
 - Netlify: https://app.netlify.com
