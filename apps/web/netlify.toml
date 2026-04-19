@@ -2,7 +2,7 @@
 
 [build]
   base = ""
-  command = "npm ci && npm run build -w @saas-burnrate/web"
+  command = "npm ci && npm run build -w @burnpilot/web"
   publish = "apps/web/dist"
 
 [build.environment]

@@ -3,6 +3,15 @@
 > Especificación concreta del proyecto BurnPilot siguiendo el estándar Leadstodeals.
 > Las secciones globales 1–14 (stack, estructura, código, seguridad, git, performance, env, estado, logging, testing, checklists) viven en [docs/agents/AGENTS.md](docs/agents/AGENTS.md) y se aplican a este proyecto sin modificar.
 > El plan maestro con posicionamiento, alcance y roadmap vive en [docs/burnpilot_plan.md](docs/burnpilot_plan.md) (v1.3).
+>
+> **Estado vivo (sprint, próximo paso, local/deploy):** [docs/STATUS.md](docs/STATUS.md).  
+> Criterio de cuándo y con qué frecuencia actualizarlo: ver **§ Política de mantenimiento** al final de ese archivo (equilibrio eficacia / precisión).
+>
+> **Hardening y control de calidad (obligatorio):** § **P12** — no es optativo; se activa por disparadores explícitos, no por buena voluntad.
+>
+> **Backlog de producto (MoSCoW — lectura sí, implementación no automática):** [docs/product_backlog_moscow.md](docs/product_backlog_moscow.md). Inventario de ideas y prioridades **candidatas**; **no** es scope aprobado ni orden de implementación. La IA puede usarlo como **contexto estratégico** y para **proponer** roadmap o reclasificar; **no** debe implementar entradas **solo** porque figuren en el archivo. La implementación exige **aprobación explícita** del fundador y su reflejo en plan/sprint activo, `docs/STATUS.md` o instrucción explícita en la conversación.
+>
+> **Traspaso entre chats / límite de contexto:** [docs/AGENT_CHAT_HANDOFF.md](docs/AGENT_CHAT_HANDOFF.md) y snapshot [docs/handoff/LATEST.md](docs/handoff/LATEST.md).
 
 ---
 
@@ -28,7 +37,7 @@ Base de datos: Supabase (Postgres + Auth + RLS por user_id). Región eu-west-1. 
 Auth:          Supabase Auth (email+password + Google OAuth + verificación obligatoria)
 Estado global: Zustand (sesión, plan); TanStack Query para datos de servidor
 Integraciones: Stripe (Checkout + Customer Portal + Webhook + Stripe Tax), Resend (email), Sentry, Better Stack (logs + uptime), Umami (analytics)
-Hosting frontend: Netlify (divergencia consciente del estándar Leadstodeals que marca Vercel; ver P12)
+Hosting frontend: Netlify (divergencia consciente del estándar Leadstodeals que marca Vercel; ver P13)
 Hosting backend:  Railway
 DNS / CDN:        Cloudflare
 ```
@@ -303,13 +312,116 @@ Logo MVP: wordmark temporal Inter bold + icono lucide (Flame).
 
 ---
 
-## P12. NOTAS Y DECISIONES TÉCNICAS
+## P12. PROTOCOLO OBLIGATORIO DE HARDENING Y REVISIÓN DE CALIDAD
+
+*(Hardening & Quality Review Protocol.)*
+
+Norma operativa del proyecto: la IA y cualquier contribuidor **deben** ejecutar esta rutina cuando corresponda. No sustituye tests ni revisión humana; evita acumular fragilidad y deuda técnica bajo el disfraz de “ya funciona en local”.
+
+### 1. Propósito
+
+Este protocolo existe para:
+
+- Aumentar solidez del código y de los puntos de integración (DB, API, auth, pagos).
+- Reducir deuda técnica de forma deliberada, no solo reaccionando a incidentes.
+- Mejorar mantenibilidad y coherencia de contratos (tipos, RLS, validaciones).
+- Detectar fragilidad **antes** de producción o de un entorno que importe.
+- Evitar seguir construyendo sobre bases débiles o mal entendidas.
+- Instaurar cultura de **revisión continua**, no solo de entrega de features.
+
+### 2. Disparadores obligatorios (activación)
+
+El protocolo **se activa** — es decir: se deja el modo “solo construir” y se entra en **modo hardening** — cuando ocurre **cualquiera** de lo siguiente:
+
+**A. Cierre de cada sprint relevante**  
+En particular si el sprint ha tocado: auth, billing, datos, permisos, dashboards, formularios, integración entre módulos o lógica de negocio sensible.
+
+**B. Antes de cualquier deploy importante**  
+Incluye: paso a staging serio, primera vez en un entorno compartido, o **producción**. No cuenta un deploy de prueba desechable si el responsable declara explícitamente que es throwaway; en la duda, aplicar protocolo.
+
+**C. Acumulación de complejidad o contexto**  
+Por ejemplo: muchas features encadenadas sin pausa de revisión; muchas modificaciones sin auditoría estructural; conversación o contexto ya muy cargado; sensación de “funciona” sin haber mirado bordes, errores ni permisos.
+
+**D. Cambios en zonas sensibles**  
+Incluye de forma no exhaustiva: RLS y políticas Supabase; Stripe y webhooks; borrado de cuenta o datos; límites de plan; lógica monetaria; asignaciones / lógica compartida entre módulos; cron, jobs o agentes automatizados.
+
+**E. Antes de declarar “terminado” un bloque o funcionalidad**  
+“Terminado” no es solo demo en local. Exige una pasada de hardening **proporcional a la criticidad** del bloque (ver §5).
+
+### 3. Modo hardening: qué debe hacer la IA
+
+Al activarse el protocolo, la IA **cambia temporalmente** de modo construcción a modo **hardening**. Ese modo **incluye como mínimo**:
+
+- Auditoría del alcance afectado (qué archivos, tablas, rutas y flujos entran).
+- Detección explícita de deuda técnica introducida o arrastrada.
+- Revisión de arquitectura **local** al cambio (no rediseñar el producto entero).
+- Revisión de tipos y contratos (TypeScript, payloads, respuestas RPC, env).
+- Revisión de validaciones (cliente, servidor si aplica, BD).
+- Revisión de edge cases (null, errores de red, permisos denegados).
+- Revisión de estados de UX (carga, error, vacío, éxito).
+- Revisión de seguridad y permisos (RLS, fugas de datos entre usuarios).
+- Si hay build o deploy en juego: revisión de pipeline, env y puntos de fallo conocidos.
+- **Priorización** de hallazgos (crítico / alto / medio / bajo).
+- **Propuesta de correcciones en bloques pequeños** y aplicables, no un “big bang” innecesario.
+
+### 4. Regla de contención (durante el hardening)
+
+Mientras dure una sesión de hardening activa:
+
+- **No** se añaden nuevas features salvo corrección de bug crítico o bloqueante.
+- **No** se reabre el diseño de producto salvo incoherencia grave detectada en la auditoría.
+- **No** se hacen refactors masivos sin justificación escrita (alcance, riesgo, beneficio).
+- Se prioriza **robustez** frente a sofisticación; **claridad** frente a cleverness.
+- Se corrige lo **frágil**; no se reescribe lo que ya es suficientemente correcto y estable.
+- Si un hallazgo es cosmético o de bajo valor frente al riesgo, queda documentado y pospuesto con criterio explícito.
+
+### 5. Nivel de revisión según riesgo
+
+**Hardening ligero** — Sprints menores, cambios acotados, bajo riesgo de seguridad o dinero.  
+Enfoque: calidad del bloque tocado, consistencia de tipos y validaciones, smoke de flujos afectados.
+
+**Hardening completo** — Sprints grandes, zonas sensibles (§2.D), pre-release o primer deploy serio.  
+Enfoque: arquitectura del flujo end-to-end relevante, seguridad y RLS, estados de error y vacío, validaciones en profundidad, coherencia con `docs/STATUS.md` y migraciones, preparación de build/deploy.
+
+La IA **debe** declarar al inicio del hardening qué nivel aplica y por qué (una frase basta).
+
+### 6. Salida obligatoria de cada hardening
+
+Cada ejecución del protocolo debe producir **siempre**, por escrito:
+
+1. **Diagnóstico** del estado del alcance revisado.
+2. **Lista priorizada de problemas** (con severidad).
+3. **Propuesta de bloques de corrección** (orden sugerido, dependencias).
+4. **Criterio de terminado** para ese hardening (qué debe cumplirse para dar el bloque por cerrado).
+5. **Recomendación explícita**: continuar construyendo / esperar correcciones / no desplegar aún.
+
+Sin estos cinco elementos, el hardening **no se considera cerrado**.
+
+### 7. Integración en el flujo del proyecto
+
+El desarrollo no es solo “feature tras feature”. El flujo esperado es:
+
+```
+Build → Review → Harden → Verify → Continue / Deploy
+```
+
+- **Build:** implementación acordada.  
+- **Review:** lectura cruzada mínima (código, impacto, coherencia con AGENTS y plan).  
+- **Harden:** este protocolo cuando dispara §2.  
+- **Verify:** comprobar criterio de terminado (§6) y regresiones básicas.  
+- **Continue / Deploy:** solo si verify es satisfactorio o los riesgos restantes están aceptados y documentados.
+
+`docs/STATUS.md` sigue siendo el sitio donde reflejar sprint, rutas y bloqueos; un hardening de cierre de sprint puede resumirse ahí o en el handoff sin duplicar párrafos enteros de AGENTS.
+
+---
+
+## P13. NOTAS Y DECISIONES TÉCNICAS
 
 ```
 2026-04-18: Nombre del producto cambiado de BurnRate a BurnPilot.
-            Dominio objetivo: burnpilot.app (por registrar).
-            Paquetes npm internos mantienen prefijo @saas-burnrate/* por
-            coherencia con el monorepo, sin impacto en el producto visible.
+            Dominio: burnpilot.app. Workspaces publicados como @burnpilot/*
+            (web, api, types, utils); el name del package.json raíz puede
+            seguir siendo legacy sin afectar al producto.
 
 2026-04-18: Divergencia consciente del estándar Leadstodeals — frontend
             desplegado en Netlify (no Vercel). Motivo: decisión de producto
@@ -330,31 +442,66 @@ Logo MVP: wordmark temporal Inter bold + icono lucide (Flame).
 2026-04-18: allocation_pct existe en backend desde día 1 pero NO se
             muestra en UX salvo que el usuario marque "compartida"
             explícitamente (ver P8). Decisión de contención de UX.
+
+2026-04-20: Propuesta "BurnIntel" (n8n + scraping + Claude + snapshots /
+            embeddings en Supabase) archivada FUERA del CORE MVP actual.
+            Decisión: no entra en el plan por ahora; reapertura solo tras
+            consolidar MVP y criterio explícito. Detalle en
+            docs/future/burnintel-n8n-agent.md.
+
+2026-04-20: docs/STATUS.md creado como fuente operativa de handoff (sprint
+            hecho / siguiente / rutas / local / bloqueos). Debe mantenerse
+            al día; AGENTS.md P14 remite a STATUS para no duplicar.
+
+2026-04-20: docs/AGENT_CHAT_HANDOFF.md + docs/handoff/LATEST.md — traspaso
+            entre chats cuando hay límite de contexto (regla práctica, no
+            medición exacta del 90 %). REGLA 10 en docs/cursorrules.txt.
+
+2026-04-18: Sprint 2 — modelo `categories`, `fx_rates`, `tool_templates`, `projects`,
+            `tools`, `project_tools` en migración
+            `supabase/migrations/20250420000001_tools_projects_categories.sql`;
+            UI `/tools` + `AppShell` con proyectos en sidebar; cierre del sprint
+            sujeto a aplicar SQL en Supabase y QA RLS (2 cuentas). Detalle en
+            docs/STATUS.md.
+
+2026-04-18: Sprint 3 — RPC `dashboard_summary`, `project_summary`, `tool_assignment`,
+            `dashboard_history` en `supabase/migrations/20250421000001_dashboard_rpc.sql`.
+            UI `/dashboard` con métricas y gráfico por categoría; `/projects/:id` detalle.
+            Gráficos con **Recharts** (Tremor `@tremor/react` declara peer React 18;
+            Recharts es el camino hasta alinear Tremor con React 19 o bajar React).
+
+2026-04-19: Sprint 4 — `compute_alerts`, `compute_project_alerts`, `savings_plan` en
+            `20250422000001_sprint4_alerts_savings.sql`; alertas en JSON de
+            `dashboard_summary` / `project_summary`. UI `/savings`, onboarding,
+            borrado de cuenta `DELETE /v1/account` (Express + service role). Detalle en
+            docs/STATUS.md.
+
+2026-04-19: P12 — Protocolo obligatorio de hardening y revisión de calidad (disparadores,
+            modo hardening, regla de contención, niveles ligero/completo, salida obligatoria,
+            flujo Build → Review → Harden → Verify → Continue/Deploy). Norma operativa para
+            IA y flujo de desarrollo; no recomendación opcional.
+
+2026-04-19: Backlog de producto MoSCoW en docs/product_backlog_moscow.md — ideas y
+            prioridades no vinculantes; la IA no implementa por el mero hecho de estar
+            listado; promoción solo con aprobación explícita y reflejo en STATUS/sprint/plan.
+
+2026-04-19: Cierre de bloque Sprints 0–4 (sesión): borrado de cuenta verificado en local;
+            API `apps/api/src/loadEnv.ts` + `dotenv`, CORS dev para localhost/127.0.0.1:5173,
+            purge `tools`/`projects`/`profiles` antes de `auth.admin.deleteUser`. Hardening
+            ligero §P12 documentado en docs/STATUS.md; handoff en docs/handoff/LATEST.md;
+            desarrollo por sprints en pausa hasta nueva sesión — siguiente planificado Sprint 5.
 ```
 
 ---
 
-## P13. ESTADO ACTUAL Y PRÓXIMOS PASOS
+## P14. ESTADO ACTUAL Y PRÓXIMOS PASOS
 
 ```
-Estado:          En desarrollo — Sprint 0 en curso
-URL producción:  pendiente (burnpilot.app por registrar en Cloudflare Registrar)
-URL local:       http://localhost:5173 (frontend) / http://localhost:3000 (backend)
+No duplicar aquí el detalle operativo día a día.
 
-Completado:
-  ✅ Plan maestro v1.3 aprobado
-  🔄 Sprint 0 — scaffold del monorepo en curso
+Ver siempre: docs/STATUS.md (sprint cerrado, siguiente, rutas, local, bloqueos).
 
-En curso:
-  🔄 Scaffold NPM Workspaces (apps/web, apps/api, packages/types, packages/utils, supabase/)
-  🔄 CI GitHub Actions
-  🔄 Deploy hola mundo a Netlify y Railway
-
-Pendiente (operativas del usuario):
-  ⏳ Registrar dominio burnpilot.app en Cloudflare Registrar
-  ⏳ Crear proyectos: Supabase (dev+prod eu-west), Railway, Netlify,
-     Stripe (test), Cloudflare zone, Resend, Sentry, Better Stack, Umami
-  ⏳ Crear repo github.com/japerez1978/burnpilot y primer push
-  ⏳ Stripe KYC para modo live (sandbox basta mientras desarrollamos)
-  ⏳ Sprint 1: Auth + perfil (Supabase Auth + migración 0001_init)
+Resumen fijo de intención: CORE MVP según docs/burnpilot_plan.md v1.3;
+            SECONDARY sacrificable si aprieta el tiempo; BurnIntel fuera
+            de alcance (docs/future/burnintel-n8n-agent.md).
 ```

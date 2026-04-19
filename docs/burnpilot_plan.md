@@ -511,7 +511,7 @@ Cada stack con `last_reviewed_at`, badge "actualizado en MM/YYYY", revisión tri
 - **Netlify**: confirmado; **autodeploy desde `main`**; previews automáticos en PRs.
 - **Logo**: Sprint 0 con **wordmark temporal** Inter bold + icono lucide, sin bloquear cimientos por branding final. Logo definitivo va a SECONDARY o post-lanzamiento.
 - **Proyectos a crear**: Supabase (dev + prod eu-west), Railway, Stripe, Cloudflare, Resend, Sentry, Better Stack, Umami, GitHub repo `burnpilot`.
-- **Docs guía**: `AGENTS.md` y `cursorrules.txt` se respetan tal cual; divergencias (Netlify) documentadas en P12 del AGENTS.md del proyecto.
+- **Docs guía**: `AGENTS.md` y `cursorrules.txt` se respetan tal cual; divergencias (Netlify) documentadas en P13 del AGENTS.md del proyecto.
 
 ---
 

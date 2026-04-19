@@ -1,0 +1,384 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { formatCents, toMonthlyCents, type Periodicity } from '@burnpilot/utils';
+import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import type { ProjectToolEmbed, ToolRow } from '@/components/tools/ToolFormModal';
+import { ToolFormModal } from '@/components/tools/ToolFormModal';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
+import { useSessionStore } from '@/store/sessionStore';
+
+type CategoryRow = { id: number; name: string; slug: string };
+type ProjectRow = { id: string; name: string };
+
+type ToolListRow = ToolRow & {
+  categories: { name: string } | null;
+  project_tools: Array<
+    ProjectToolEmbed & {
+      projects?: { id: string; name: string } | null;
+    }
+  > | null;
+};
+
+function assignmentLabel(row: ToolListRow): string {
+  const pt = row.project_tools ?? [];
+  if (pt.length === 0) return 'Sin proyecto';
+  if (pt.length === 1) {
+    const n = pt[0].projects?.name ?? 'proyecto';
+    return `Asignada · ${n}`;
+  }
+  return `Compartida · ${pt.length} proyectos`;
+}
+
+const TOOL_STATE_KEYS = ['trial', 'active', 'doubtful', 'to_cancel', 'canceled'] as const;
+type ToolStateKey = (typeof TOOL_STATE_KEYS)[number];
+
+/** Orden de filas en tabla: prueba → activa → en duda → para cancelar → cancelada */
+const TOOL_STATE_SORT: Record<string, number> = {
+  trial: 0,
+  active: 1,
+  doubtful: 2,
+  to_cancel: 3,
+  canceled: 4,
+};
+
+function toolStateLabel(state: string): string {
+  switch (state) {
+    case 'active':
+      return 'Activa';
+    case 'trial':
+      return 'Prueba';
+    case 'doubtful':
+      return 'En duda';
+    case 'to_cancel':
+      return 'Para cancelar';
+    case 'canceled':
+      return 'Cancelada';
+    default:
+      return state;
+  }
+}
+
+function toolStateClass(state: string): string {
+  switch (state) {
+    case 'trial':
+      return 'text-sky-400';
+    case 'active':
+      return 'text-accent-green';
+    case 'doubtful':
+      return 'text-yellow-400';
+    case 'to_cancel':
+      return 'text-orange-400';
+    case 'canceled':
+      return 'text-accent-red';
+    default:
+      return 'text-fg-muted';
+  }
+}
+
+export function ToolsPage() {
+  const user = useSessionStore((s) => s.session?.user);
+  const configured = isSupabaseConfigured();
+  const queryClient = useQueryClient();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ToolListRow | null>(null);
+  const [visibleStates, setVisibleStates] = useState<Record<ToolStateKey, boolean>>(() => ({
+    trial: true,
+    active: true,
+    doubtful: true,
+    to_cancel: true,
+    canceled: true,
+  }));
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories'],
+    enabled: configured,
+    queryFn: async (): Promise<CategoryRow[]> => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('categories').select('id, name, slug').order('id');
+      if (error) throw error;
+      return (data ?? []) as CategoryRow[];
+    },
+  });
+
+  const projectsQuery = useQuery({
+    queryKey: ['projects', user?.id],
+    enabled: configured && Boolean(user?.id),
+    queryFn: async (): Promise<ProjectRow[]> => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ProjectRow[];
+    },
+  });
+
+  const toolsQuery = useQuery({
+    queryKey: ['tools', user?.id],
+    enabled: configured && Boolean(user?.id),
+    queryFn: async (): Promise<ToolListRow[]> => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('tools')
+        .select(
+          `
+          *,
+          categories ( name ),
+          project_tools (
+            project_id,
+            allocation_pct,
+            projects ( id, name )
+          )
+        `,
+        )
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ToolListRow[];
+    },
+  });
+
+  const softDeleteMutation = useMutation({
+    mutationFn: async (toolId: string) => {
+      const supabase = getSupabaseClient();
+      const { error: d1 } = await supabase.from('project_tools').delete().eq('tool_id', toolId);
+      if (d1) throw d1;
+      const { error: d2 } = await supabase.from('tools').update({ deleted_at: new Date().toISOString() }).eq('id', toolId);
+      if (d2) throw d2;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tools', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-summary', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['project-summary', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['savings-plan', user?.id] });
+    },
+  });
+
+  const categories = categoriesQuery.data ?? [];
+  const projects = projectsQuery.data ?? [];
+
+  const readyForModal = useMemo(
+    () => categories.length > 0 && categoriesQuery.isSuccess,
+    [categories.length, categoriesQuery.isSuccess],
+  );
+
+  const rawTools = toolsQuery.data ?? [];
+  const displayedTools = useMemo(() => {
+    const filtered = rawTools.filter((r) => {
+      const k = r.state as ToolStateKey;
+      return TOOL_STATE_KEYS.includes(k) ? visibleStates[k] : true;
+    });
+    return [...filtered].sort((a, b) => {
+      const oa = TOOL_STATE_SORT[a.state] ?? 99;
+      const ob = TOOL_STATE_SORT[b.state] ?? 99;
+      if (oa !== ob) return oa - ob;
+      return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });
+    });
+  }, [rawTools, visibleStates]);
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-10">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Herramientas</h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            Suscripciones y costes. Los datos viven en{' '}
+            <code className="font-mono text-fg-primary">public.tools</code>.
+          </p>
+        </div>
+        <Button
+          type="button"
+          disabled={!readyForModal}
+          onClick={() => {
+            setEditing(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus className="mr-1.5 inline h-4 w-4" />
+          Añadir
+        </Button>
+      </header>
+
+      {!toolsQuery.isLoading && !toolsQuery.isError && rawTools.length > 0 ? (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <details className="group relative z-20">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-sm font-medium text-fg-primary hover:bg-bg-elev [&::-webkit-details-marker]:hidden">
+              Filtrar por estado
+              <ChevronDown className="h-4 w-4 opacity-70 transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div
+              className="absolute left-0 mt-2 min-w-[240px] rounded-lg border border-bg-border bg-bg-card p-3 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-2 text-xs text-fg-muted">Marca los estados que quieres ver (varios a la vez).</p>
+              <ul className="space-y-2">
+                {TOOL_STATE_KEYS.map((key) => (
+                  <li key={key}>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="rounded border-bg-border text-accent-green focus:ring-accent-green"
+                        checked={visibleStates[key]}
+                        onChange={() =>
+                          setVisibleStates((s) => ({
+                            ...s,
+                            [key]: !s[key],
+                          }))
+                        }
+                      />
+                      <span className={toolStateClass(key)}>{toolStateLabel(key)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-bg-border pt-3">
+                <button
+                  type="button"
+                  className="text-xs font-medium text-accent-green hover:underline"
+                  onClick={() =>
+                    setVisibleStates({
+                      trial: true,
+                      active: true,
+                      doubtful: true,
+                      to_cancel: true,
+                      canceled: true,
+                    })
+                  }
+                >
+                  Todas
+                </button>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-fg-muted hover:text-fg-primary hover:underline"
+                  onClick={() =>
+                    setVisibleStates({
+                      trial: false,
+                      active: false,
+                      doubtful: false,
+                      to_cancel: false,
+                      canceled: false,
+                    })
+                  }
+                >
+                  Ninguna
+                </button>
+              </div>
+            </div>
+          </details>
+          <span className="text-xs text-fg-muted">
+            {displayedTools.length === rawTools.length
+              ? `${rawTools.length} herramienta${rawTools.length === 1 ? '' : 's'}`
+              : `Mostrando ${displayedTools.length} de ${rawTools.length}`}
+          </span>
+        </div>
+      ) : null}
+
+      {toolsQuery.isLoading ? (
+        <p className="mt-8 text-sm text-fg-muted">Cargando herramientas…</p>
+      ) : toolsQuery.isError ? (
+        <p className="mt-8 text-sm text-accent-amber">
+          No se pudieron cargar las herramientas. Aplica la migración Sprint 2 en Supabase:{' '}
+          <code className="font-mono text-xs">supabase/migrations/20250420000001_tools_projects_categories.sql</code>
+        </p>
+      ) : (
+        <div className="mt-8 overflow-x-auto rounded-xl border border-bg-border">
+          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-bg-border bg-bg-elev text-fg-muted">
+                <th className="px-4 py-3 font-medium">Nombre</th>
+                <th className="px-4 py-3 font-medium">Categoría</th>
+                <th className="px-4 py-3 font-medium">Estado</th>
+                <th className="px-4 py-3 text-center font-medium">Coste mensual (aprox.)</th>
+                <th className="px-4 py-3 font-medium">Asignación</th>
+                <th className="px-4 py-3 font-medium text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawTools.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-fg-muted">
+                    No hay herramientas aún. Pulsa <strong className="text-fg-primary">Añadir</strong>.
+                  </td>
+                </tr>
+              ) : displayedTools.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-fg-muted">
+                    Ninguna herramienta coincide con los estados seleccionados. Abre{' '}
+                    <strong className="text-fg-primary">Filtrar por estado</strong> y marca al menos uno.
+                  </td>
+                </tr>
+              ) : (
+                displayedTools.map((row) => {
+                  const monthly = toMonthlyCents(row.amount_cents, row.periodicity as Periodicity);
+                  const monthlyLabel = formatCents(monthly, row.currency);
+                  const st = row.state;
+                  const stateClass = toolStateClass(st);
+                  return (
+                    <tr key={row.id} className="border-b border-bg-border/80 hover:bg-bg-card/40">
+                      <td className="px-4 py-3 font-medium text-fg-primary">{row.name}</td>
+                      <td className="px-4 py-3 text-fg-muted">{row.categories?.name ?? '—'}</td>
+                      <td className={`px-4 py-3 text-sm ${stateClass}`}>{toolStateLabel(st)}</td>
+                      <td className="px-4 py-3 text-center font-mono tabular-nums text-fg-primary">{monthlyLabel}</td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-fg-muted">{assignmentLabel(row)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          className="mr-2 inline-flex rounded p-1.5 text-fg-muted hover:bg-bg-elev hover:text-accent-green"
+                          title="Editar"
+                          onClick={() => {
+                            setEditing(row);
+                            setModalOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex rounded p-1.5 text-fg-muted hover:bg-bg-elev hover:text-accent-red"
+                          title="Eliminar"
+                          onClick={() => {
+                            if (!confirm('¿Eliminar esta herramienta?')) return;
+                            softDeleteMutation.mutate(row.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {user && readyForModal ? (
+        <ToolFormModal
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setEditing(null);
+          }}
+          userId={user.id}
+          editing={
+            editing
+              ? {
+                  ...editing,
+                  project_tools: (editing.project_tools ?? []).map((r) => ({
+                    project_id: r.project_id,
+                    allocation_pct: Number(r.allocation_pct),
+                  })),
+                }
+              : null
+          }
+          categories={categories}
+          projects={projects}
+        />
+      ) : null}
+    </div>
+  );
+}

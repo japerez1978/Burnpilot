@@ -1,0 +1,180 @@
+# BurnPilot — estado operativo
+
+> **Propósito:** handoff rápido entre herramientas, agentes o personas.  
+> **Mantenimiento:** ver § *Política de mantenimiento* al final (equilibrio eficacia / precisión).
+
+**Última actualización:** 2026-04-19
+
+---
+
+## Resumen en una frase
+
+**Sprints 0–4** cerrados en repo y validados en local en la sesión 2026-04-19 (incl. borrado de cuenta extremo a extremo). **Sprint 5** (Stripe + gating) es el siguiente cuando se retome el desarrollo.
+
+**Nota de cierre (2026-04-19):** el fundador da por **pausado** el trabajo por sprints hasta nueva sesión; el estado operativo y el handoff quedan reflejados aquí y en [docs/handoff/LATEST.md](handoff/LATEST.md).
+
+---
+
+## Sprint cerrado o estable
+
+| Sprint | Estado | Notas |
+|--------|--------|--------|
+| **Sprint 0** | Hecho | Monorepo, web + API `/health`, deploy inicial (Netlify/Railway según contexto), branding BurnPilot. |
+| **Sprint 1** | Hecho en local | Supabase proyecto dedicado, migración `profiles`, Auth (email + Google opcional), login/register/forgot/reset/callback, dashboard, **`/settings/account`** (nombre, moneda, presupuesto). Resend + SMTP Supabase verificado por el fundador. |
+| **Sprint 2** | Hecho (ver QA RLS) | Migración `20250420000001_tools_projects_categories.sql` + web tools/proyectos. |
+| **Sprint 3** | Hecho (SQL + app) | `20250421000001_dashboard_rpc.sql`: KPIs, **`/dashboard`**, **`/projects/:id`**, Recharts. |
+| **Sprint 4** | Hecho (SQL + app + QA local) | Alertas, **`/savings`**, onboarding, **`DELETE /v1/account`** (purge `public.*` + Auth); API con `loadEnv`, CORS dev. Ver § *Hardening de cierre* abajo. |
+
+---
+
+## Sprint en curso / siguiente
+
+| Prioridad | Sprint | Objetivo |
+|-----------|--------|----------|
+| **Pausa** | — | Sin sprint en ejecución hasta nueva sesión (2026-04-19). |
+| **Siguiente** | **Sprint 5** | Billing Stripe + gating. |
+| Después | — | Histórico real `dashboard_history`, refinar alertas. |
+
+**Congelado / fuera de plan actual:** agente n8n + scraping + BurnIntel → [docs/future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md).
+
+---
+
+## Código y rutas útiles (web)
+
+- `/` — home  
+- `/login`, `/register`, `/auth/forgot`, `/auth/reset`, `/auth/callback`  
+- `/onboarding` — primera vez (tras login si `onboarding_completed_at` es null)  
+- `/dashboard` — KPIs globales (`rpc dashboard_summary`) + alertas  
+- `/projects/:id` — burn del proyecto + alertas (`rpc project_summary`)  
+- `/tools` — CRUD herramientas (requiere sesión)  
+- `/savings` — plan de ahorro (`rpc savings_plan`)  
+- `/settings/account` — perfil + **eliminar cuenta** (requiere API con service role)
+
+**Migraciones (aplicar en orden en Supabase):**  
+`20250418000001_init_profiles.sql` → `public.profiles`  
+`20250420000001_tools_projects_categories.sql` → catálogo + `projects`, `tools`, `project_tools`, etc.  
+`20250421000001_dashboard_rpc.sql` → RPC dashboard + helpers  
+`20250422000001_sprint4_alerts_savings.sql` → `compute_alerts`, `savings_plan`, alertas en RPCs, backfill onboarding
+
+**API (Railway / local):** `DELETE /v1/account` — JWT en header; en servidor: purge ordenado de `tools` → `projects` → `profiles`, luego `auth.admin.deleteUser`. Variables: `apps/api/.env` cargado vía **`src/loadEnv.ts`** (varias rutas posibles según `cwd` del monorepo).
+
+---
+
+## Hardening de cierre (P12) — 2026-04-19
+
+Activación: **cierre de bloque de sprints** + zona sensible (**borrado de cuenta**, API + Supabase). Nivel: **ligero** (calidad del bloque tocado).
+
+| Entregable P12 | Contenido breve |
+|----------------|-----------------|
+| **Diagnóstico** | Sprints 0–4 coherentes con plan; entorno local estable tras ajustes API (dotenv, CORS, purge previo a `deleteUser`). |
+| **Hallazgos (prioridad)** | (1) Node no inyecta `.env` solo → `loadEnv.ts` + dependencia `dotenv`. (2) `deleteUser` fallaba con “Database error…” → purge explícito en `public.*`. (3) *Futuro:* nuevas tablas con `user_id` deben CASCADE o sumarse al purge. |
+| **Criterio de terminado** | Borrado de cuenta OK en local (204); documentación STATUS/handoff actualizada; sin tarea de código abierta en este bloque. |
+| **Recomendación** | **Seguir construyendo** cuando retome: **Sprint 5**; antes de producción, **hardening completo** (§P12) + env Railway + revisión webhooks Stripe. |
+
+---
+
+## Local
+
+```bash
+npm run dev -w @burnpilot/web    # solo front
+# o
+npm run dev                       # web + api (necesario para borrar cuenta)
+```
+
+- Front: `http://localhost:5173` · API: `http://localhost:3000` (por defecto en `apps/api`)  
+- Web: `apps/web/.env.local` — `VITE_SUPABASE_*`, **`VITE_API_URL=http://localhost:3000`** (para borrado de cuenta y cualquier llamada al backend).  
+- API: `apps/api/.env` — `SUPABASE_URL`, **`SUPABASE_SERVICE_ROLE_KEY`** (Dashboard Supabase → Settings → API; **no** usar en el front). **`loadEnv.ts`** resuelve el `.env` aunque `npm run dev` arranque desde la raíz del monorepo.  
+- Vite carga `.env.local` desde `apps/web` (`envDir` en `vite.config.ts`).
+
+### Probar borrado de cuenta (local)
+
+1. Arranca **web + API**: `npm run dev` (o dos terminales: `dev:web` y `dev:api`).  
+2. En `apps/api/.env`, `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` del **mismo** proyecto que el front.  
+3. En `apps/web/.env.local`, `VITE_API_URL=http://localhost:3000` (mismo origen que escucha Express).  
+4. Crea una cuenta de prueba (o usa una desechable), entra a **Cuenta** → Zona peligrosa → **Eliminar cuenta** y confirma.  
+5. Debe responder **204**, cerrar sesión y volver al home; en Supabase → **Authentication → Users** el usuario debe desaparecer.  
+6. Si ves error de configuración: API no arrancada, `VITE_API_URL` mal, o falta service role → revisa logs de la API.
+
+---
+
+## Despliegue / operativa (contexto)
+
+- **Producción app:** prioridad pausada a petición del fundador; foco **local** hasta nueva orden.  
+- **Dominio:** `burnpilot.app`, API `api.burnpilot.app` (según configuración previa).  
+- **Netlify:** build workspace `@burnpilot/web` (ver `apps/web/netlify.toml`).
+
+---
+
+## Bloqueos conocidos
+
+- Ninguno conocido en **local** tras QA 2026-04-19 (migraciones 18–22 aplicadas; borrado de cuenta verificado).  
+- **Producción:** API en Railway debe definir las mismas vars que en local; front debe usar `VITE_API_URL` apuntando al dominio de la API.
+
+---
+
+## Documentos de referencia
+
+| Doc | Uso |
+|-----|-----|
+| [AGENTS.md](../AGENTS.md) | Especificación P1–P14 del proyecto |
+| [product_backlog_moscow.md](product_backlog_moscow.md) | Backlog MoSCoW (ideas; no es scope hasta promoción explícita) |
+| [burnpilot_plan.md](burnpilot_plan.md) | Plan maestro v1.3 |
+| [future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md) | Idea archivada |
+| [runbook.md](runbook.md) | Operativa / troubleshooting |
+
+---
+
+## Criterio de éxito inmediato (cuando se retome)
+
+1. **Sprint 5:** Stripe (Checkout, webhooks, `plan_tier` / portal).  
+2. Opcional antes de producción: API en Railway con env + `VITE_API_URL` al dominio de la API; hardening completo §P12.
+
+---
+
+## Política de mantenimiento (agentes / desatendido)
+
+Objetivo: **mantener este doc útil sin reescribirlo en cada mensaje** ni gastar ciclos en cambios que no alteran el “estado del proyecto”.
+
+### Sí actualizar `STATUS.md` (un commit lógico al cierre del bloque)
+
+- Cambia el **sprint** declarado (cerrado uno, empieza otro, o se **congela** el actual).
+- Aparece o se resuelve un **bloqueo** que afecta al siguiente paso (deploy, Supabase, CI, etc.).
+- Cambia la **estrategia operativa** acordada (p. ej. “solo local” ↔ “deploy producción”, dominio, proveedor).
+- Se añade una **migración** o **ruta** relevante para handoff (tabla nueva, pantalla nueva en CORE).
+- El fundador **cierra una fase** (“hasta aquí hoy”) y el resumen de una frase debe reflejarlo.
+
+En esos casos: edita las tablas/secciones afectadas y **bump** de `**Última actualización:**` a la fecha real (YYYY-MM-DD).
+
+### No hace falta tocar `STATUS.md`
+
+- Cambios **solo de código** sin impacto en sprint, rutas, migraciones o bloqueos (refactors, estilo, tests).
+- Dudas, lectura de archivos o **una sola línea** corregida sin cambio de plan.
+- Iteración intra-sesión: **agrupa**; no hace falta guardar tras cada tool call.
+
+### README.md
+
+- **No** sincronizar con `STATUS` en cada cambio.
+- Tocar `README.md` solo si cambia **estructura del repo**, comandos de arranque, o enlaces de documentación de primer nivel.
+
+### Seguridad del contenido
+
+- **Nunca** pegar API keys, tokens, contenido de `.env.local`, ni secretos de Supabase/Stripe.
+- URLs públicas del proyecto y nombres de tablas/rutas: sí.
+
+### AGENTS.md
+
+- **P12 (Hardening):** protocolo obligatorio — disparadores, modo revisión y salida en §P12 del [AGENTS.md](../AGENTS.md); activar al cerrar sprint relevante o antes de deploy serio.
+- **P13 (Notas técnicas):** decisiones **de producto o arquitectura** duraderas → una línea en **P13**, no repetir todo el detalle que ya está aquí.
+
+### Resumen para el agente
+
+| Frecuencia | Acción |
+|------------|--------|
+| Alta (varias veces en un turno largo) | **Una** actualización de `STATUS` al final si hubo cambio material; si no, ninguna. |
+| Media (cierre de sprint / hito) | Actualizar sí o sí + fecha. |
+| Baja (solo chat, sin cambio de hechos) | No tocar. |
+
+### Traspaso entre chats (límite de contexto)
+
+- Regla práctica y plantilla: **[docs/AGENT_CHAT_HANDOFF.md](AGENT_CHAT_HANDOFF.md)**.
+- Snapshot pegable para el siguiente hilo: **[docs/handoff/LATEST.md](handoff/LATEST.md)** (actualizar al cerrar sesión / traspaso, sin secretos).

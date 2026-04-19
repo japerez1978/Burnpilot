@@ -19,3 +19,6 @@ npm-debug.log*
 yarn-debug.log*
 
 .idea/
+
+# Obsidian (notas locales)
+**/.obsidian/

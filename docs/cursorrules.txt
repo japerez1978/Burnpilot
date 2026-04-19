@@ -113,6 +113,16 @@ Formato descriptivo siempre:
 
 ---
 
+## REGLA 10 — BurnPilot / fin de conversación y traspaso a otro chat
+- Proyecto BurnPilot en este monorepo: despliegue front según **AGENTS.md** (Netlify), no solo las reglas antiguas de Vercel de arriba.
+- Cuando el **usuario** indique que el chat llega al límite, o el **cliente** avise de contexto lleno, o la conversación sea imposible de seguir sin compactar:
+  1. Generar **resumen de traspaso** (plantilla en `docs/AGENT_CHAT_HANDOFF.md`).
+  2. Actualizar si aplica **`docs/handoff/LATEST.md`** (sin secretos).
+  3. **Avisar** al usuario de abrir **chat nuevo** y pegar el resumen o leer `docs/handoff/LATEST.md` + `docs/STATUS.md` + `AGENTS.md`.
+- No se puede medir un “90 % exacto” de tokens en todos los entornos; actuar ante **señales claras** (aviso del producto, petición del usuario, hilo enorme).
+
+---
+
 ## CHECKLIST antes de entregar cualquier feature
 - [ ] npm run build → Exit code: 0
 - [ ] App funciona en localhost:5173

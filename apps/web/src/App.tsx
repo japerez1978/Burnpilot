@@ -1,18 +1,54 @@
-import { Flame } from 'lucide-react';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { RequireAuth } from '@/components/auth/RequireAuth';
+import { RequireOnboardingComplete } from '@/components/auth/RequireOnboardingComplete';
+import { AppShell } from '@/components/layout/AppShell';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { HomePage } from '@/pages/HomePage';
+import { LoginPage } from '@/pages/LoginPage';
+import { OnboardingPage } from '@/pages/OnboardingPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { SavingsPage } from '@/pages/SavingsPage';
+import { SettingsAccountPage } from '@/pages/SettingsAccountPage';
+import { ProjectDashboardPage } from '@/pages/ProjectDashboardPage';
+import { ToolsPage } from '@/pages/ToolsPage';
 
 export function App() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-      <div className="flex items-center gap-3">
-        <Flame className="h-10 w-10 text-accent-green" strokeWidth={2} />
-        <h1 className="text-4xl font-bold tracking-tight">BurnPilot</h1>
-      </div>
-      <p className="max-w-md text-center text-fg-muted">
-        Spend optimizer para builders no técnicos.
-      </p>
-      <code className="rounded border border-bg-border bg-bg-card px-3 py-1.5 font-mono text-sm text-accent-green">
-        Sprint 0 · cimientos listos
-      </code>
-    </main>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset" element={<ResetPasswordPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route
+        element={
+          <RequireAuth>
+            <Outlet />
+          </RequireAuth>
+        }
+      >
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route
+          element={
+            <RequireOnboardingComplete>
+              <Outlet />
+            </RequireOnboardingComplete>
+          }
+        >
+          <Route element={<AppShell />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/projects/:id" element={<ProjectDashboardPage />} />
+            <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/savings" element={<SavingsPage />} />
+            <Route path="/settings/account" element={<SettingsAccountPage />} />
+          </Route>
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

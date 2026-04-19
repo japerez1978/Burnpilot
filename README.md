@@ -9,7 +9,7 @@ SaaS spend optimizer para builders no técnicos. Monorepo gestionado con NPM Wor
 - `packages/types` — Zod schemas y tipos compartidos front ↔ back
 - `packages/utils` — utilidades puras (money, fx, dates)
 - `supabase/` — migraciones SQL + seeds + functions
-- `docs/` — documentación y plan maestro ([docs/burnrate_plan.md](docs/burnrate_plan.md))
+- `docs/` — plan maestro, STATUS operativo, runbook ([docs/burnpilot_plan.md](docs/burnpilot_plan.md), [docs/STATUS.md](docs/STATUS.md))
 
 ## Requisitos
 
@@ -45,7 +45,9 @@ npm run dev
 
 ## Documentación interna
 
-  - [docs/burnpilot_plan.md](docs/burnpilot_plan.md) — plan maestro v1.3
+- **[docs/STATUS.md](docs/STATUS.md)** — estado del sprint y handoff; al final, **política de mantenimiento**
+- **[docs/AGENT_CHAT_HANDOFF.md](docs/AGENT_CHAT_HANDOFF.md)** — traspaso entre chats / límite de contexto; **[docs/handoff/LATEST.md](docs/handoff/LATEST.md)** — snapshot para pegar en un chat nuevo
+- [docs/burnpilot_plan.md](docs/burnpilot_plan.md) — plan maestro v1.3
+- [AGENTS.md](AGENTS.md) — especificación del proyecto (P1–P14)
 - [docs/agents/AGENTS.md](docs/agents/AGENTS.md) — estándar Leadstodeals
 - [docs/cursorrules.txt](docs/cursorrules.txt) — reglas operativas
-- [AGENTS.md](AGENTS.md) — especificación del proyecto (P1–P13)

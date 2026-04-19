@@ -12,6 +12,7 @@
   "dependencies": {
     "@burnpilot/types": "*",
     "@burnpilot/utils": "*",
+    "@hookform/resolvers": "^3.9.0",
     "@supabase/supabase-js": "2.49.1",
     "@tanstack/react-query": "^5.56.2",
     "clsx": "^2.1.1",
@@ -21,6 +22,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.53.0",
     "react-router-dom": "^6.26.2",
+    "recharts": "^2.15.4",
     "tailwind-merge": "^2.5.3",
     "zod": "^3.23.8",
     "zustand": "^4.5.5"
