@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { getAuthSiteOrigin } from '@/lib/authSiteOrigin';
 import { formatAuthError } from '@/lib/authErrors';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -46,8 +47,10 @@ export function ForgotPasswordPage() {
     clearErrors('root');
     setInfo(null);
 
+    const redirectTo = `${getAuthSiteOrigin()}/auth/reset`;
+
     const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/auth/reset`,
+      redirectTo,
     });
 
     if (error) {

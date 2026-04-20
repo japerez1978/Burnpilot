@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button, ButtonSecondary } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { getAuthSiteOrigin } from '@/lib/authSiteOrigin';
 import { formatAuthError } from '@/lib/authErrors';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -69,7 +70,7 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${getAuthSiteOrigin()}/auth/callback`,
         queryParams: { prompt: 'select_account' },
       },
     });
