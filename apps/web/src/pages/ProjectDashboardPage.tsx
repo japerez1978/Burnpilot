@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { formatCents } from '@burnpilot/utils';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BarChart2, GitCompare } from 'lucide-react';
 import { AlertList } from '@/components/alerts/AlertList';
+import { BurnRateHistoryChart } from '@/components/dashboard/BurnRateHistoryChart';
+import { StackComparisonTable } from '@/components/dashboard/StackComparisonTable';
 import { ButtonSecondary } from '@/components/ui/Button';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
+import { useProjectHistoryQuery } from '@/hooks/useProjectHistoryQuery';
 import type { ProjectSummary } from '@/lib/dashboardRpc';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { useSessionStore } from '@/store/sessionStore';
@@ -15,6 +18,7 @@ export function ProjectDashboardPage() {
   const user = useSessionStore((s) => s.session?.user);
   const configured = isSupabaseConfigured();
   const profileQuery = useProfileQuery();
+  const historyQuery = useProjectHistoryQuery(id);
 
   const summaryQuery = useQuery({
     queryKey: ['project-summary', user?.id, id],
@@ -38,6 +42,8 @@ export function ProjectDashboardPage() {
     profileQuery.data?.display_currency && ['EUR', 'USD', 'GBP'].includes(profileQuery.data.display_currency)
       ? profileQuery.data.display_currency
       : 'EUR';
+
+  const snapshots = historyQuery.data ?? [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -72,6 +78,7 @@ export function ProjectDashboardPage() {
 
           <AlertList alerts={summaryQuery.data.alerts} className="mb-8" />
 
+          {/* KPIs actuales */}
           <section className="mb-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-bg-border bg-bg-card p-5">
               <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Burn mensual</p>
@@ -87,6 +94,38 @@ export function ProjectDashboardPage() {
             </div>
           </section>
 
+          {/* Historial — gráfico */}
+          <section className="mb-6 rounded-xl border border-bg-border bg-bg-card p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-accent-green" strokeWidth={2} />
+              <h2 className="text-sm font-medium text-fg-primary">Evolución del burn rate</h2>
+              {snapshots.length > 0 && (
+                <span className="ml-auto text-xs text-fg-muted">
+                  {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {historyQuery.isLoading ? (
+              <p className="py-8 text-center text-sm text-fg-muted">Cargando historial…</p>
+            ) : (
+              <BurnRateHistoryChart snapshots={snapshots} currency={currency} />
+            )}
+          </section>
+
+          {/* Historial — tabla de comparación */}
+          <section className="mb-8 rounded-xl border border-bg-border bg-bg-card p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <GitCompare className="h-4 w-4 text-accent-green" strokeWidth={2} />
+              <h2 className="text-sm font-medium text-fg-primary">Comparación de snapshots</h2>
+            </div>
+            {historyQuery.isLoading ? (
+              <p className="text-sm text-fg-muted">Cargando…</p>
+            ) : (
+              <StackComparisonTable snapshots={snapshots} currency={currency} />
+            )}
+          </section>
+
+          {/* Herramientas asignadas */}
           <section className="rounded-xl border border-bg-border bg-bg-card p-5">
             <h2 className="text-sm font-medium text-fg-muted">Herramientas asignadas</h2>
             {summaryQuery.data.tools.length === 0 ? (
