@@ -61,6 +61,8 @@
 
 ## Go-live (Sprint 7)
 
+**Paso a paso detallado:** [GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md) (Supabase → Railway → Netlify → Stripe → smoke test).
+
 Antes de abrir tráfico público serio:
 
 1. **Dominio:** DNS (Cloudflare) apuntando a Netlify (web) y Railway/API; SSL activo.

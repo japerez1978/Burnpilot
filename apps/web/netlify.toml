@@ -1,4 +1,5 @@
 # Netlify build config for BurnPilot web app (monorepo NPM Workspaces)
+# Variables VITE_*: Site settings → Environment variables (ver docs/GO_LIVE_PASO_A_PASO.md)
 
 [build]
   base = ""

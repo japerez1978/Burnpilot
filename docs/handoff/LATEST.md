@@ -21,7 +21,7 @@
 
 ## Siguiente
 
-- **Operativa:** checklist go-live en `docs/runbook.md` (DNS, env producción, legal definitivo, backups Stripe live).
+- **Operativa:** seguir [docs/GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md); validar env local con `npm run go-live:check`. Resumen en `docs/runbook.md` § Go-live.
 
 ## Local
 

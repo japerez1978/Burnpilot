@@ -9,7 +9,7 @@
 
 ## Resumen en una frase
 
-**Sprints 0–7** cubiertos en código para el alcance MVP: landing pública, precios, FAQ, legales (borrador), Sentry/Umami opcionales ([docs/sprint7_closeout.md](sprint7_closeout.md)). Operativa de producción (DNS, env, legal definitivo, backups verificados) sigue el [runbook](runbook.md) § *Go-live*.
+**Sprints 0–7** cubiertos en código para el alcance MVP: landing pública, precios, FAQ, legales (borrador), Sentry/Umami opcionales ([docs/sprint7_closeout.md](sprint7_closeout.md)). Operativa de producción: guía ordenada en [GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md) + `npm run go-live:check`; resumen en [runbook](runbook.md) § *Go-live*.
 
 **Repo GitHub:** `main` sincronizado con `origin` (commit `c2b95a4` y anteriores). Remoto: `https://github.com/japerez1978/burnpilot.git` — si GitHub avisa de redirect al nombre `Burnpilot.git`, se puede alinear con `git remote set-url origin <url_canónica>`.
 

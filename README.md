@@ -43,6 +43,13 @@ npm run dev
 - **Backend**: Railway → `api.burnpilot.app`
 - **DB + Auth**: Supabase (eu-west-1)
 
+**Checklist guiada (orden Supabase → Railway → Netlify → Stripe):** [docs/GO_LIVE_PASO_A_PASO.md](docs/GO_LIVE_PASO_A_PASO.md). Antes de copiar variables a los paneles:
+
+```bash
+npm run go-live:check
+npm run go-live:check -- --production
+```
+
 ## Documentación interna
 
 - **[docs/STATUS.md](docs/STATUS.md)** — estado del sprint y handoff; al final, **política de mantenimiento**
