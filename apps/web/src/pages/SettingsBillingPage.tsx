@@ -160,27 +160,31 @@ export function SettingsBillingPage() {
         ) : (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-lg font-semibold text-fg-primary">{planLabel(tier)}</p>
-            {tier !== 'lifetime' && billing?.cancel_at_period_end && billing.status === 'active' ? (
-              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
-                Cancelada
-              </span>
-            ) : null}
+            {/* Lifetime: badge fijo verde, ignora fila billing */}
             {tier === 'lifetime' ? (
               <span className="rounded-full border border-accent-green/40 bg-accent-green/10 px-2 py-0.5 text-xs font-medium text-accent-green">
                 Lifetime
               </span>
             ) : null}
-            {tier !== 'lifetime' && billing?.status === 'past_due' ? (
-              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
-                Pago fallido
-              </span>
-            ) : null}
-            {tier !== 'lifetime' && billing?.status === 'trialing' ? (
+
+            {/* Pro: badges según estado de la suscripción en Stripe */}
+            {tier === 'pro' && billing?.status === 'trialing' ? (
               <span className="rounded-full border border-accent-green/40 bg-accent-green/10 px-2 py-0.5 text-xs font-medium text-accent-green">
                 En prueba
               </span>
             ) : null}
-            {tier === 'pro' && billing?.status === 'active' && !billing.cancel_at_period_end ? (
+            {tier === 'pro' && billing?.status === 'past_due' ? (
+              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
+                Pago fallido
+              </span>
+            ) : null}
+            {tier === 'pro' && billing?.cancel_at_period_end && billing.status === 'active' ? (
+              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
+                Cancelada
+              </span>
+            ) : null}
+            {/* "Activa" — tier es la fuente de verdad; si billing aún no cargó o status es active sin cancel, mostramos Activa */}
+            {tier === 'pro' && !billing?.cancel_at_period_end && billing?.status !== 'past_due' && billing?.status !== 'trialing' ? (
               <span className="rounded-full border border-accent-green/40 bg-accent-green/10 px-2 py-0.5 text-xs font-medium text-accent-green">
                 Activa
               </span>
