@@ -58,3 +58,20 @@
 3. Verificar CI Exit 0 y deploy limpio.
 4. Anotar en este runbook en la sección del componente afectado.
 5. Si afectó a usuarios, email transparente desde `hello@burnpilot.app`.
+
+## Go-live (Sprint 7)
+
+Antes de abrir tráfico público serio:
+
+1. **Dominio:** DNS (Cloudflare) apuntando a Netlify (web) y Railway/API; SSL activo.
+2. **Variables:** `apps/web` en Netlify con `VITE_SUPABASE_*`, `VITE_API_URL`, opcional `VITE_SENTRY_DSN`, `VITE_UMAMI_WEBSITE_ID`. `apps/api` en Railway con mismas claves Supabase que producción + Stripe live cuando toque.
+3. **Stripe:** modo live, webhook URL de producción y secretos alineados; probar checkout y portal.
+4. **Legal:** revisar y sustituir borradores en `/legal/privacy` y `/legal/terms` con texto validado por asesoría.
+5. **Observabilidad:** Sentry proyecto producción; Umami sitio producción; en Better Stack (o similar) monitor HTTP a `/health` de la API y URL pública de la web.
+6. **Backup Supabase:** plan Pro; probar restore documentado en § *Backups Supabase* arriba antes de cargar datos reales críticos.
+7. **Smoke test:** registro, onboarding, alta de tool, dashboard, facturación test con tarjeta Stripe test→live según fase.
+
+## Front: analítica y errores
+
+- **Sentry:** `VITE_SENTRY_DSN` en build del front (no commitear valor). Errores de runtime y sesiones replay según muestreo en `src/lib/observability.ts`.
+- **Umami:** `VITE_UMAMI_WEBSITE_ID`; script cargado desde `cloud.umami.is`. Ajustar política de cookies en la landing/legal si aplica.

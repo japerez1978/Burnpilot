@@ -9,7 +9,7 @@
 
 ## Resumen en una frase
 
-**Sprints 0–6** cerrados en código y documentados ([docs/sprint6_closeout.md](sprint6_closeout.md)). **Sprint 7** (landing + go-live) es el siguiente hito cuando se retome.
+**Sprints 0–7** cubiertos en código para el alcance MVP: landing pública, precios, FAQ, legales (borrador), Sentry/Umami opcionales ([docs/sprint7_closeout.md](sprint7_closeout.md)). Operativa de producción (DNS, env, legal definitivo, backups verificados) sigue el [runbook](runbook.md) § *Go-live*.
 
 **Repo GitHub:** `main` sincronizado con `origin` (commit `c2b95a4` y anteriores). Remoto: `https://github.com/japerez1978/burnpilot.git` — si GitHub avisa de redirect al nombre `Burnpilot.git`, se puede alinear con `git remote set-url origin <url_canónica>`.
 
@@ -28,6 +28,7 @@
 | **Sprint 4** | Hecho (SQL + app + QA local) | Alertas, **`/savings`**, onboarding, **`DELETE /v1/account`** (purge `public.*` + Auth); API con `loadEnv`, CORS dev. Ver § *Hardening de cierre* abajo. |
 | **Sprint 5** | Hecho en repo | Stripe Checkout / Portal / webhook, **`/settings/billing`**, `subscriptions_billing`; gating según `plan_tier`. |
 | **Sprint 6** | Hecho (SECONDARY) | Stacks: migraciones **29–30**, **`/stacks`**, `stack_comparison`, “Aplicar” vía enlace a **`/tools`** con `prefillName` + `assignProject`; dashboard: histórico global 6m; CSV Pro en cuenta. Detalle: [docs/sprint6_closeout.md](sprint6_closeout.md). |
+| **Sprint 7** | Hecho (MVP código + doc) | Landing, **`/pricing`**, **`/faq`**, **`/legal/*`**, `PublicLayout`, Sentry + Umami vía env; runbook go-live. [docs/sprint7_closeout.md](sprint7_closeout.md). |
 
 ---
 
@@ -35,7 +36,7 @@
 
 | Prioridad | Sprint | Objetivo |
 |-----------|--------|----------|
-| **Siguiente** | **Sprint 7** | Landing + go-live (ver `burnpilot_plan.md` §19). |
+| **Siguiente** | **Post-MVP** | Pulir marketing, legal definitivo, hardening P12 completo, producción estable. |
 
 **Congelado / fuera de plan actual:** agente n8n + scraping + BurnIntel → [docs/future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md).
 
@@ -43,7 +44,9 @@
 
 ## Código y rutas útiles (web)
 
-- `/` — home  
+- `/` — landing (valor + comparativa vs Rocket Money + CTA)  
+- `/pricing`, `/faq` — marketing  
+- `/legal/privacy`, `/legal/terms` — borradores legales (revisar antes de producción)  
 - `/login`, `/register`, `/auth/forgot`, `/auth/reset`, `/auth/callback`  
 - `/onboarding` — primera vez (tras login si `onboarding_completed_at` es null)  
 - `/dashboard` — KPIs globales (`rpc dashboard_summary`) + alertas; tooltip del gráfico «Por categoría» con texto legible (label/item claros)  
@@ -129,6 +132,7 @@ npm run dev                       # web + api (necesario para borrar cuenta)
 | [product_backlog_moscow.md](product_backlog_moscow.md) | Backlog MoSCoW (ideas; no es scope hasta promoción explícita) |
 | [burnpilot_plan.md](burnpilot_plan.md) | Plan maestro v1.3 |
 | [sprint6_closeout.md](sprint6_closeout.md) | Cierre Sprint 6 (entregables + operativa) |
+| [sprint7_closeout.md](sprint7_closeout.md) | Cierre Sprint 7 (landing + observabilidad + runbook) |
 | [future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md) | Idea archivada |
 | [runbook.md](runbook.md) | Operativa / troubleshooting |
 
@@ -136,8 +140,8 @@ npm run dev                       # web + api (necesario para borrar cuenta)
 
 ## Criterio de éxito inmediato (cuando se retome)
 
-1. **Sprint 7:** landing pública, Sentry/Umami/Better Stack según plan, legal, runbook.  
-2. Migraciones **29–30** deben estar aplicadas en el proyecto Supabase activo antes de validar Stacks/histórico en producción.
+1. **Producción:** completar checklist [runbook § Go-live](runbook.md) (env, Stripe live, legal revisado, backups).  
+2. Migraciones **29–30** en Supabase del entorno que despliegues.
 
 ---
 

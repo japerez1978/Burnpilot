@@ -7,46 +7,31 @@
 
 - **BurnPilot**: SaaS B2C spend optimizer; `user_id` vía RLS.
 - **Plan maestro:** `docs/burnpilot_plan.md` v1.3.
-- **Backlog MoSCoW (no ejecutable por omisión):** `docs/product_backlog_moscow.md`.
+- **Sprints 0–7 (MVP código):** cerrados en repo; detalle Sprint 6–7 en `docs/sprint6_closeout.md` y `docs/sprint7_closeout.md`.
 
 ## Stack
 
-- **Front:** React 19, Vite, TS, Tailwind, Zustand, TanStack Query, RHF+Zod, react-router, Supabase JS **2.49.1**, Recharts.
-- **API:** Express — `/health`, billing Stripe, webhooks, **`DELETE /v1/account`** (JWT + service role; purge antes de Auth).
-- **DB/Auth:** Supabase. Migraciones **18 → 30** en orden (ver [docs/STATUS.md](../STATUS.md)); **29–30** = Sprint 6 (snapshots + recommended stacks).
-- **Deploy:** Netlify (web), Railway (API).
+- **Front:** React 19, Vite, TS, Tailwind, TanStack Query, Supabase JS **2.49.1**, Recharts, **@sentry/react** (opcional con `VITE_SENTRY_DSN`), Umami opcional (`VITE_UMAMI_WEBSITE_ID`).
+- **API:** Express — health, billing, webhooks, cuenta.
+- **DB:** Supabase; migraciones **18 → 30** en orden.
 
-## Repo Git
+## Rutas públicas nuevas (Sprint 7)
 
-- Rama **`main`**; sincronizar con remoto tras cada hito.
-- Remoto habitual: `https://github.com/japerez1978/burnpilot.git`.
-
-## Hecho hasta esta sesión
-
-- **Sprints 0–6 cerrados en código.** Detalle Sprint 6: [docs/sprint6_closeout.md](../sprint6_closeout.md).
-- **Sprint 5:** Stripe, `/settings/billing`, `plan_tier` + API con `SUPABASE_URL` base (sin `/rest/v1/`) y `SUPABASE_ANON_KEY` alineada al front.
-- **Sprint 6:** `/stacks` (biblioteca + `stack_comparison`), histórico global en `/dashboard`, CSV Pro en cuenta, enlaces “Añadir sugerida” → `/tools?prefillName&assignProject`.
-- **Estado vivo:** [docs/STATUS.md](../STATUS.md).
+`/`, `/pricing`, `/faq`, `/legal/privacy`, `/legal/terms` — usan `PublicLayout` (nav + footer).
 
 ## Siguiente
 
-- **Sprint 7:** landing + go-live (plan maestro §19).
-
-## Rutas web útiles
-
-`/`, `/login`, `/register`, `/auth/*`, `/onboarding`, `/dashboard`, `/projects/:id`, `/tools`, `/stacks`, `/savings`, `/settings/account`, `/settings/billing`
+- **Operativa:** checklist go-live en `docs/runbook.md` (DNS, env producción, legal definitivo, backups Stripe live).
 
 ## Local
 
 ```bash
-npm run dev                       # web + api
-npm run dev -w @burnpilot/web    # solo front
+npm run dev
 ```
 
-- `apps/web/.env.local`: `VITE_SUPABASE_*`, **`VITE_API_URL=http://localhost:3000`**
-- `apps/api/.env`: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (= web), `SUPABASE_SERVICE_ROLE_KEY`, Stripe según billing. No subir al repo.
+- `apps/web/.env.local`: `VITE_SUPABASE_*`, `VITE_API_URL`, opcional `VITE_SENTRY_DSN`, `VITE_UMAMI_WEBSITE_ID`.
 
 ## Notas
 
-- Especificación: **[AGENTS.md](../../AGENTS.md)** (P1–P14).
-- Operativa: **[docs/runbook.md](../runbook.md)**.
+- Estado: **[docs/STATUS.md](../STATUS.md)**.
+- Especificación: **[AGENTS.md](../../AGENTS.md)**.

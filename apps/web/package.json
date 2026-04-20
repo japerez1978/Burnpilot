@@ -13,6 +13,7 @@
     "@burnpilot/types": "*",
     "@burnpilot/utils": "*",
     "@hookform/resolvers": "^3.9.0",
+    "@sentry/react": "^10.49.0",
     "@supabase/supabase-js": "2.49.1",
     "@tanstack/react-query": "^5.56.2",
     "clsx": "^2.1.1",
