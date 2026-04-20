@@ -468,6 +468,9 @@ Formato `{ ok: true, data }` o `{ ok: false, error, code }`. Validación Zod. Pa
 - Backup Supabase Pro verificado.
 - Checklist go-live.
 
+**Sprint 8 — Post-MVP (definición extendida en repo)**  
+No forma parte del plan v1.3 original; se añade como iteración tras go-live. Objetivo: **legal definitivo**, **Stripe Live**, **observabilidad** (Sentry/Umami/monitores), **backups Supabase** con restore probado, **hardening** ligero (CORS, checklist §18), mejoras opcionales de SEO/copy. Detalle: `docs/sprint8_scope.md`.
+
 ---
 
 ## 20. Catálogo inicial de Recommended Stacks (seed para Sprint 5)

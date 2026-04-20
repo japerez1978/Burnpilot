@@ -3,17 +3,17 @@
 > **Propósito:** handoff rápido entre herramientas, agentes o personas.  
 > **Mantenimiento:** ver § *Política de mantenimiento* al final (equilibrio eficacia / precisión).
 
-**Última actualización:** 2026-04-19
+**Última actualización:** 2026-04-20
 
 ---
 
 ## Resumen en una frase
 
-**Sprints 0–7** cubiertos en código para el alcance MVP: landing pública, precios, FAQ, legales (borrador), Sentry/Umami opcionales ([docs/sprint7_closeout.md](sprint7_closeout.md)). Operativa de producción: guía ordenada en [GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md) + `npm run go-live:check`; resumen en [runbook](runbook.md) § *Go-live*.
+**Sprints 0–7** cubiertos en código para el alcance MVP: landing pública, precios, FAQ, legales (borrador), Sentry/Umami opcionales ([docs/sprint7_closeout.md](sprint7_closeout.md)). **Go-live operativo** (2026-04-20): API `api.burnpilot.app`, Netlify + Supabase Auth + Stripe webhook `/webhooks/stripe`; referencia [production_environment.md](production_environment.md). Guía de despliegue: [GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md) + `npm run go-live:check`; incidentes en [runbook](runbook.md).
 
-**Repo GitHub:** `main` sincronizado con `origin` (commit `c2b95a4` y anteriores). Remoto: `https://github.com/japerez1978/burnpilot.git` — si GitHub avisa de redirect al nombre `Burnpilot.git`, se puede alinear con `git remote set-url origin <url_canónica>`.
+**Repo GitHub:** `main` sincronizado con `origin` (p. ej. commit `212e591` — docs go-live). Remoto: `https://github.com/japerez1978/Burnpilot.git`.
 
-**Nota de cierre (2026-04-19):** el fundador dio por **pausado** el trabajo por sprints hasta nueva sesión; el handoff sigue en [docs/handoff/LATEST.md](handoff/LATEST.md).
+**Siguiente:** [Sprint 8](sprint8_scope.md) — legal definitivo, Stripe Live, observabilidad, backups.
 
 ---
 
@@ -28,7 +28,7 @@
 | **Sprint 4** | Hecho (SQL + app + QA local) | Alertas, **`/savings`**, onboarding, **`DELETE /v1/account`** (purge `public.*` + Auth); API con `loadEnv`, CORS dev. Ver § *Hardening de cierre* abajo. |
 | **Sprint 5** | Hecho en repo | Stripe Checkout / Portal / webhook, **`/settings/billing`**, `subscriptions_billing`; gating según `plan_tier`. |
 | **Sprint 6** | Hecho (SECONDARY) | Stacks: migraciones **29–30**, **`/stacks`**, `stack_comparison`, “Aplicar” vía enlace a **`/tools`** con `prefillName` + `assignProject`; dashboard: histórico global 6m; CSV Pro en cuenta. Detalle: [docs/sprint6_closeout.md](sprint6_closeout.md). |
-| **Sprint 7** | Hecho (MVP código + doc) | Landing, **`/pricing`**, **`/faq`**, **`/legal/*`**, `PublicLayout`, Sentry + Umami vía env; runbook go-live. [docs/sprint7_closeout.md](sprint7_closeout.md). |
+| **Sprint 7** | Hecho + **prod verificada** | Igual que arriba + despliegue real documentado en [production_environment.md](production_environment.md). |
 
 ---
 
@@ -36,7 +36,7 @@
 
 | Prioridad | Sprint | Objetivo |
 |-----------|--------|----------|
-| **Siguiente** | **Post-MVP** | Pulir marketing, legal definitivo, hardening P12 completo, producción estable. |
+| **Siguiente** | **Sprint 8** | Post-MVP: legal definitivo, Stripe Live, monitores, backups verificados, hardening ligero. Detalle: [docs/sprint8_scope.md](sprint8_scope.md). |
 
 **Congelado / fuera de plan actual:** agente n8n + scraping + BurnIntel → [docs/future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md).
 

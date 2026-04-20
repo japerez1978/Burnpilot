@@ -16,9 +16,12 @@
 | Umami | Script opcional si `VITE_UMAMI_WEBSITE_ID` |
 | Runbook | Sección go-live + observabilidad front |
 
-## Pendiente fuera de repo (operativa)
+## Operativa verificada (2026-04-20)
 
-- Sustituir borradores legales tras asesoría.
-- Configurar DSN/tokens en Netlify/Railway y probar en staging.
-- Verificar backup/restore Supabase en entorno real.
-- Better Stack (u otro): monitores a `GET /health` y URL pública web.
+- API pública **`https://api.burnpilot.app`** con `GET /health` OK; front en Netlify con `VITE_API_URL` apuntando a la API.
+- Webhook Stripe con ruta **`/webhooks/stripe`** y `STRIPE_WEBHOOK_SECRET` alineado en Railway (destino correcto en Stripe).
+- Inventario **sin secretos:** [production_environment.md](production_environment.md).
+
+## Pendiente post go-live (Sprint 8)
+
+- Legal definitivo, Stripe **Live**, monitores, backup/restore verificado. Ver [sprint8_scope.md](sprint8_scope.md).

@@ -1,13 +1,14 @@
 # BurnPilot — último snapshot para nuevo chat
 
 > Generado para traspaso de contexto. **Sin secretos.**  
-> **Fecha snapshot:** 2026-04-19
+> **Fecha snapshot:** 2026-04-20
 
 ## Producto
 
 - **BurnPilot**: SaaS B2C spend optimizer; `user_id` vía RLS.
 - **Plan maestro:** `docs/burnpilot_plan.md` v1.3.
-- **Sprints 0–7 (MVP código):** cerrados en repo; detalle Sprint 6–7 en `docs/sprint6_closeout.md` y `docs/sprint7_closeout.md`.
+- **Sprints 0–7 (MVP código):** cerrados en repo; Sprint 7 con **go-live verificado** — ver `docs/production_environment.md`.
+- **Sprint 8 (siguiente):** `docs/sprint8_scope.md` (legal, Stripe Live, observabilidad, backups).
 
 ## Stack
 
@@ -21,7 +22,8 @@
 
 ## Siguiente
 
-- **Operativa:** seguir [docs/GO_LIVE_PASO_A_PASO.md](GO_LIVE_PASO_A_PASO.md); validar env local con `npm run go-live:check`. Resumen en `docs/runbook.md` § Go-live.
+- **Sprint 8:** [docs/sprint8_scope.md](sprint8_scope.md).
+- **Prod (referencia sin secretos):** [docs/production_environment.md](production_environment.md).
 
 ## Local
 

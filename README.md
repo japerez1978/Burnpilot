@@ -53,6 +53,7 @@ npm run go-live:check -- --production
 ## Documentación interna
 
 - **[docs/STATUS.md](docs/STATUS.md)** — estado del sprint y handoff; al final, **política de mantenimiento**
+- **[docs/production_environment.md](docs/production_environment.md)** — topología de producción (sin secretos); **[docs/sprint8_scope.md](docs/sprint8_scope.md)** — siguiente iteración
 - **[docs/AGENT_CHAT_HANDOFF.md](docs/AGENT_CHAT_HANDOFF.md)** — traspaso entre chats / límite de contexto; **[docs/handoff/LATEST.md](docs/handoff/LATEST.md)** — snapshot para pegar en un chat nuevo
 - [docs/burnpilot_plan.md](docs/burnpilot_plan.md) — plan maestro v1.3
 - [AGENTS.md](AGENTS.md) — especificación del proyecto (P1–P14)

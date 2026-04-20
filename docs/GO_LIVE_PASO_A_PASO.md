@@ -94,4 +94,4 @@ El build ya está definido en `apps/web/netlify.toml` (`npm ci && npm run build 
 
 - **CORS en el front:** `ALLOWED_ORIGIN` en Railway debe ser exactamente `https://tu-dominio-front` sin barra final.
 - **Build Netlify sin Supabase:** faltan `VITE_*` en entorno de build o no redeploy tras cambiarlas.
-- Más: [docs/runbook.md](runbook.md).
+- Más: [docs/runbook.md](runbook.md). Tras el despliegue, referencia **sin secretos:** [production_environment.md](production_environment.md).
