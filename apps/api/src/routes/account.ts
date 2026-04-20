@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
+import { getBearerUser } from '../utils/authBearer';
 import { loadConfig } from '../utils/config';
 import { log } from '../utils/logger';
 
@@ -12,6 +14,25 @@ export const accountRouter = Router();
  * Evita fallos tipo "Database error deleting user" cuando la cascada o triggers en Auth fallan.
  */
 async function purgePublicUserData(admin: SupabaseClient, userId: string): Promise<Error | null> {
+  const { data: billRow } = await admin
+    .from('subscriptions_billing')
+    .select('stripe_customer_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (config.STRIPE_SECRET_KEY && billRow?.stripe_customer_id) {
+    try {
+      const stripe = new Stripe(config.STRIPE_SECRET_KEY);
+      await stripe.customers.del(billRow.stripe_customer_id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      log('warn', 'account.stripe_customer_delete', { message: msg, userId });
+    }
+  }
+
+  const { error: billErr } = await admin.from('subscriptions_billing').delete().eq('user_id', userId);
+  if (billErr) return new Error(billErr.message);
+
   const { error: toolsErr } = await admin.from('tools').delete().eq('user_id', userId);
   if (toolsErr) return new Error(toolsErr.message);
 
@@ -26,13 +47,6 @@ async function purgePublicUserData(admin: SupabaseClient, userId: string): Promi
 
 /** Borra datos públicos y el usuario en Auth. Requiere service role. */
 accountRouter.delete('/account', async (req, res) => {
-  const raw = req.headers.authorization;
-  const token = raw?.startsWith('Bearer ') ? raw.slice(7).trim() : null;
-  if (!token) {
-    res.status(401).json({ ok: false, error: 'Missing bearer token', code: 'NO_TOKEN' });
-    return;
-  }
-
   if (!config.SUPABASE_URL || !config.SUPABASE_SERVICE_ROLE_KEY) {
     res.status(503).json({
       ok: false,
@@ -42,17 +56,18 @@ accountRouter.delete('/account', async (req, res) => {
     return;
   }
 
-  const admin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData.user) {
-    res.status(401).json({ ok: false, error: 'Invalid or expired session', code: 'INVALID_TOKEN' });
+  const auth = await getBearerUser(config, req.headers.authorization);
+  if ('error' in auth) {
+    const status = auth.code === 'NO_TOKEN' ? 401 : auth.code === 'NOT_CONFIGURED' ? 503 : 401;
+    res.status(status).json({ ok: false, error: auth.error, code: auth.code });
     return;
   }
 
-  const userId = userData.user.id;
+  const userId = auth.user.id;
+
+  const admin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
   const purgeErr = await purgePublicUserData(admin, userId);
   if (purgeErr) {

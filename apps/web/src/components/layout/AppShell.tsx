@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Flame, LayoutDashboard, PiggyBank, Settings, Wrench } from 'lucide-react';
+import { CreditCard, Flame, LayoutDashboard, PiggyBank, Settings, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProjectSidebarSection } from '@/components/projects/ProjectSidebarSection';
 
@@ -8,6 +8,7 @@ const nav = [
   { to: '/tools', label: 'Herramientas', icon: Wrench },
   { to: '/savings', label: 'Ahorro', icon: PiggyBank },
   { to: '/settings/account', label: 'Cuenta', icon: Settings },
+  { to: '/settings/billing', label: 'Facturación', icon: CreditCard },
 ] as const;
 
 export function AppShell() {

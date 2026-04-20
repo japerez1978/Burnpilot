@@ -1,13 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import type { ToolFormValues } from '@burnpilot/types';
 import { toolFormSchema } from '@burnpilot/types';
-import { splitEvenAllocations, toMonthlyCents, type Periodicity } from '@burnpilot/utils';
+import {
+  nextBillingOnOrAfter,
+  splitEvenAllocations,
+  toMonthlyCents,
+  todayLocalIsoDate,
+  type Periodicity,
+} from '@burnpilot/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
+import { mergePendingTool } from '@/lib/mergePendingTool';
 import { parseMajorToCents } from '@/lib/money';
 import { getSupabaseClient } from '@/lib/supabase';
 
@@ -26,6 +33,14 @@ export type ToolRow = {
   state: string;
   perceived_usefulness: number | null;
   notes: string | null;
+  fx_rate_to_base?: number | null;
+  amount_in_base_cents?: number | null;
+  pending_amount_cents?: number | null;
+  pending_amount_in_base_cents?: number | null;
+  pending_periodicity?: string | null;
+  pending_plan_label?: string | null;
+  pending_effective_date?: string | null;
+  deleted_at?: string | null;
 };
 
 export type ProjectToolEmbed = {
@@ -38,6 +53,8 @@ type Props = {
   onClose: () => void;
   userId: string;
   editing: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
+  /** Fila actual de `tools` (p. ej. tras refetch); evita datos obsoletos al fusionar `pending_*`. */
+  editingLive?: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
   categories: CategoryRow[];
   projects: ProjectRow[];
 };
@@ -54,8 +71,17 @@ async function fetchFxToBase(from: string, to: string): Promise<{ rate: number }
   return { rate: Number(data.rate) };
 }
 
-export function ToolFormModal({ open, onClose, userId, editing, categories, projects }: Props) {
+export function ToolFormModal({
+  open,
+  onClose,
+  userId,
+  editing,
+  editingLive,
+  categories,
+  projects,
+}: Props) {
   const queryClient = useQueryClient();
+  const [scheduleNextRenewal, setScheduleNextRenewal] = useState(false);
   /** Misma fuente que el resto de la app — no usar otra query con la misma key (pisaba onboarding_completed_at). */
   const profileQuery = useProfileQuery();
 
@@ -94,6 +120,10 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
   const assignmentMode = useWatch({ control, name: 'assignmentMode' });
 
   useEffect(() => {
+    if (open) setScheduleNextRenewal(false);
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const p = profileQuery.data;
     const baseCurrency =
@@ -102,6 +132,8 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
         : 'EUR';
 
     if (editing) {
+      const source = editingLive ?? editing;
+      const effective = mergePendingTool(source);
       const pts = editing.project_tools ?? [];
       let mode: ToolFormValues['assignmentMode'] = 'none';
       let singleId: string | null = null;
@@ -117,19 +149,19 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
         }));
       }
       reset({
-        name: editing.name,
-        vendor: editing.vendor ?? '',
-        categoryId: editing.category_id,
-        planLabel: editing.plan_label ?? '',
-        amount: String(editing.amount_cents / 100),
-        currency: editing.currency as ToolFormValues['currency'],
-        periodicity: editing.periodicity as ToolFormValues['periodicity'],
-        lastRenewalAt: editing.last_renewal_at,
-        state: editing.state as ToolFormValues['state'],
-        perceivedUsefulness: (editing.perceived_usefulness != null
-          ? String(editing.perceived_usefulness)
+        name: effective.name,
+        vendor: effective.vendor ?? '',
+        categoryId: effective.category_id,
+        planLabel: effective.plan_label ?? '',
+        amount: String(effective.amount_cents / 100),
+        currency: effective.currency as ToolFormValues['currency'],
+        periodicity: effective.periodicity as ToolFormValues['periodicity'],
+        lastRenewalAt: effective.last_renewal_at,
+        state: effective.state as ToolFormValues['state'],
+        perceivedUsefulness: (effective.perceived_usefulness != null
+          ? String(effective.perceived_usefulness)
           : '') as ToolFormValues['perceivedUsefulness'],
-        notes: editing.notes ?? '',
+        notes: effective.notes ?? '',
         assignmentMode: mode,
         singleProjectId: singleId,
         sharedAllocations: shared,
@@ -153,7 +185,7 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
       singleProjectId: null,
       sharedAllocations: [],
     });
-  }, [open, editing, categories, reset, profileQuery.data]);
+  }, [open, editing, editingLive, categories, reset, profileQuery.data]);
 
   useEffect(() => {
     if (editing) return;
@@ -167,13 +199,16 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
   }, [editing, assignmentMode, projects, fields.length, replace]);
 
   const saveMutation = useMutation({
-    mutationFn: async (values: ToolFormValues) => {
+    mutationFn: async (input: { values: ToolFormValues; schedule: boolean }) => {
+      const values = input.values;
+      const scheduleNextRenewal = input.schedule;
       const supabase = getSupabaseClient();
       const amountCents = parseMajorToCents(values.amount);
       if (amountCents == null) throw new Error('amount');
 
       const baseCurrencyRaw = profileQuery.data?.display_currency ?? 'EUR';
       const baseCurrency = ['EUR', 'USD', 'GBP'].includes(baseCurrencyRaw) ? baseCurrencyRaw : 'EUR';
+
       const monthly = toMonthlyCents(amountCents, values.periodicity as Periodicity);
       let fxRate: number | null = null;
       let amountInBase = monthly;
@@ -190,30 +225,36 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
       const perceived =
         values.perceivedUsefulness === '' ? null : Number.parseInt(values.perceivedUsefulness, 10);
 
-      const payload = {
-        user_id: userId,
-        name: values.name.trim(),
-        vendor: values.vendor?.trim() || null,
-        category_id: values.categoryId,
+      const newPricing = {
         plan_label: values.planLabel?.trim() || null,
         amount_cents: amountCents,
         currency: values.currency,
         periodicity: values.periodicity,
-        last_renewal_at: values.lastRenewalAt,
-        state: values.state,
-        perceived_usefulness: perceived,
-        notes: values.notes?.trim() || null,
         fx_rate_to_base: fxRate,
         amount_in_base_cents: amountInBase,
       };
 
-      if (editing) {
-        const { error: dErr } = await supabase.from('project_tools').delete().eq('tool_id', editing.id);
-        if (dErr) throw dErr;
-        const { error: uErr } = await supabase.from('tools').update(payload).eq('id', editing.id);
-        if (uErr) throw uErr;
-        await insertAssignments(supabase, editing.id, values);
-      } else {
+      const common = {
+        user_id: userId,
+        name: values.name.trim(),
+        vendor: values.vendor?.trim() || null,
+        category_id: values.categoryId,
+        last_renewal_at: values.lastRenewalAt,
+        state: values.state,
+        perceived_usefulness: perceived,
+        notes: values.notes?.trim() || null,
+      };
+
+      const pendingClears = {
+        pending_amount_cents: null as number | null,
+        pending_amount_in_base_cents: null as number | null,
+        pending_periodicity: null as string | null,
+        pending_plan_label: null as string | null,
+        pending_effective_date: null as string | null,
+      };
+
+      if (!editing) {
+        const payload = { ...common, ...newPricing };
         const { data: inserted, error: iErr } = await supabase
           .from('tools')
           .insert(payload)
@@ -221,7 +262,79 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
           .single();
         if (iErr) throw iErr;
         await insertAssignments(supabase, inserted.id, values);
+        return;
       }
+
+      const raw = editingLive ?? editing;
+      const baseline = mergePendingTool(raw);
+      const toolId = raw.id;
+
+      const { error: dErr } = await supabase.from('project_tools').delete().eq('tool_id', toolId);
+      if (dErr) throw dErr;
+
+      const currencyChanged = values.currency !== raw.currency;
+      const formPlan = values.planLabel?.trim() || null;
+      const baselinePlan = baseline.plan_label?.trim() || null;
+      const pricingChanged =
+        newPricing.amount_cents !== baseline.amount_cents ||
+        values.periodicity !== baseline.periodicity ||
+        (formPlan || null) !== (baselinePlan || null);
+
+      if (currencyChanged) {
+        const { error: uErr } = await supabase
+          .from('tools')
+          .update({
+            ...common,
+            ...newPricing,
+            ...pendingClears,
+          })
+          .eq('id', toolId);
+        if (uErr) throw uErr;
+        await insertAssignments(supabase, toolId, values);
+        return;
+      }
+
+      if (pricingChanged && scheduleNextRenewal) {
+        const effectiveDate = nextBillingOnOrAfter(raw.last_renewal_at, raw.periodicity as Periodicity);
+        const { error: uErr } = await supabase
+          .from('tools')
+          .update({
+            ...common,
+            amount_cents: raw.amount_cents,
+            currency: raw.currency,
+            periodicity: raw.periodicity,
+            fx_rate_to_base: raw.fx_rate_to_base ?? null,
+            amount_in_base_cents: raw.amount_in_base_cents ?? null,
+            plan_label: raw.plan_label?.trim() || null,
+            pending_amount_cents: newPricing.amount_cents,
+            pending_amount_in_base_cents: newPricing.amount_in_base_cents,
+            pending_periodicity: newPricing.periodicity,
+            pending_plan_label: newPricing.plan_label,
+            pending_effective_date: effectiveDate,
+          })
+          .eq('id', toolId);
+        if (uErr) throw uErr;
+        await insertAssignments(supabase, toolId, values);
+        return;
+      }
+
+      if (pricingChanged && !scheduleNextRenewal) {
+        const { error: uErr } = await supabase
+          .from('tools')
+          .update({
+            ...common,
+            ...newPricing,
+            ...pendingClears,
+          })
+          .eq('id', toolId);
+        if (uErr) throw uErr;
+        await insertAssignments(supabase, toolId, values);
+        return;
+      }
+
+      const { error: uErr } = await supabase.from('tools').update({ ...common }).eq('id', toolId);
+      if (uErr) throw uErr;
+      await insertAssignments(supabase, toolId, values);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['tools', userId] });
@@ -234,6 +347,11 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
 
   if (!open) return null;
 
+  const rawForModal = editing ? (editingLive ?? editing) : null;
+  const futurePending =
+    rawForModal?.pending_effective_date != null &&
+    rawForModal.pending_effective_date > todayLocalIsoDate();
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4"
@@ -245,9 +363,22 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
         <h2 id="tool-form-title" className="text-lg font-semibold text-fg-primary">
           {editing ? 'Editar herramienta' : 'Nueva herramienta'}
         </h2>
+        {futurePending && rawForModal ? (
+          <p className="mt-3 rounded-lg border border-accent-amber/40 bg-bg-base/80 px-3 py-2 text-sm text-fg-muted">
+            Cambio de importe o plan programado para el{' '}
+            <span className="font-medium text-fg-primary">{rawForModal.pending_effective_date}</span>
+            {rawForModal.pending_plan_label ? (
+              <>
+                {' '}
+                (plan: {rawForModal.pending_plan_label})
+              </>
+            ) : null}
+            . Hasta entonces sigue el precio actual.
+          </p>
+        ) : null}
         <form
           className="mt-5 max-h-[70vh] space-y-4 overflow-y-auto pr-1"
-          onSubmit={handleSubmit((v) => saveMutation.mutate(v))}
+          onSubmit={handleSubmit((v) => saveMutation.mutate({ values: v, schedule: scheduleNextRenewal }))}
           noValidate
         >
           <div className="grid gap-4 sm:grid-cols-2">
@@ -352,6 +483,22 @@ export function ToolFormModal({ open, onClose, userId, editing, categories, proj
                 <option value="canceled">Cancelada</option>
               </select>
             </div>
+            {editing && rawForModal ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-fg-muted">
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-bg-border text-accent-green focus:ring-accent-green"
+                    checked={scheduleNextRenewal}
+                    onChange={(e) => setScheduleNextRenewal(e.target.checked)}
+                  />
+                  <span>
+                    Aplicar cambios de importe, periodicidad o plan desde la próxima renovación (la moneda se
+                    aplica siempre al guardar).
+                  </span>
+                </label>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-fg-primary" htmlFor="tf-useful">
                 Utilidad (1–5)

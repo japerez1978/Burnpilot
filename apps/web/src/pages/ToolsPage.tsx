@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { formatCents, toMonthlyCents, type Periodicity } from '@burnpilot/utils';
+import { formatCents, toolRowMonthlyBurnCentsClient, type Periodicity } from '@burnpilot/utils';
 import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { ProjectToolEmbed, ToolRow } from '@/components/tools/ToolFormModal';
 import { ToolFormModal } from '@/components/tools/ToolFormModal';
+import { useProfileQuery } from '@/hooks/useProfileQuery';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 import { useSessionStore } from '@/store/sessionStore';
 
@@ -78,6 +79,7 @@ function toolStateClass(state: string): string {
 
 export function ToolsPage() {
   const user = useSessionStore((s) => s.session?.user);
+  const profileQuery = useProfileQuery();
   const configured = isSupabaseConfigured();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
@@ -159,6 +161,10 @@ export function ToolsPage() {
 
   const categories = categoriesQuery.data ?? [];
   const projects = projectsQuery.data ?? [];
+  const displayCurrency =
+    profileQuery.data?.display_currency && ['EUR', 'USD', 'GBP'].includes(profileQuery.data.display_currency)
+      ? profileQuery.data.display_currency
+      : 'EUR';
 
   const readyForModal = useMemo(
     () => categories.length > 0 && categoriesQuery.isSuccess,
@@ -312,8 +318,19 @@ export function ToolsPage() {
                 </tr>
               ) : (
                 displayedTools.map((row) => {
-                  const monthly = toMonthlyCents(row.amount_cents, row.periodicity as Periodicity);
-                  const monthlyLabel = formatCents(monthly, row.currency);
+                  const monthlyBase = toolRowMonthlyBurnCentsClient({
+                    deleted_at: row.deleted_at ?? null,
+                    state: row.state,
+                    last_renewal_at: row.last_renewal_at,
+                    periodicity: row.periodicity as Periodicity,
+                    amount_cents: row.amount_cents,
+                    amount_in_base_cents: row.amount_in_base_cents,
+                    pending_effective_date: row.pending_effective_date,
+                    pending_amount_cents: row.pending_amount_cents,
+                    pending_amount_in_base_cents: row.pending_amount_in_base_cents,
+                    pending_periodicity: row.pending_periodicity,
+                  });
+                  const monthlyLabel = formatCents(monthlyBase, displayCurrency);
                   const st = row.state;
                   const stateClass = toolStateClass(st);
                   return (
@@ -375,6 +392,7 @@ export function ToolsPage() {
                 }
               : null
           }
+          editingLive={editing ? rawTools.find((r) => r.id === editing.id) ?? null : null}
           categories={categories}
           projects={projects}
         />

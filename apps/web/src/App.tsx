@@ -12,6 +12,7 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { SavingsPage } from '@/pages/SavingsPage';
 import { SettingsAccountPage } from '@/pages/SettingsAccountPage';
+import { SettingsBillingPage } from '@/pages/SettingsBillingPage';
 import { ProjectDashboardPage } from '@/pages/ProjectDashboardPage';
 import { ToolsPage } from '@/pages/ToolsPage';
 
@@ -45,6 +46,7 @@ export function App() {
             <Route path="/tools" element={<ToolsPage />} />
             <Route path="/savings" element={<SavingsPage />} />
             <Route path="/settings/account" element={<SettingsAccountPage />} />
+            <Route path="/settings/billing" element={<SettingsBillingPage />} />
           </Route>
         </Route>
       </Route>

@@ -7,6 +7,8 @@ const ConfigSchema = z.object({
   ALLOWED_ORIGIN: z.string().url().default('http://localhost:5173'),
 
   SUPABASE_URL: z.string().url().optional(),
+  /** Misma que VITE_SUPABASE_ANON_KEY en la web; valida el JWT del usuario en rutas con Bearer. */
+  SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_JWT_SECRET: z.string().optional(),
 

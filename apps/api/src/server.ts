@@ -7,6 +7,8 @@ import { loadConfig } from './utils/config';
 import { log } from './utils/logger';
 import { healthRouter } from './routes/health';
 import { accountRouter } from './routes/account';
+import { billingRouter } from './routes/billing';
+import { stripeWebhookRouter } from './routes/stripeWebhook';
 
 const config = loadConfig();
 const app = express();
@@ -15,6 +17,8 @@ const app = express();
 const devViteOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
 app.use(helmet());
+/** Stripe firma el cuerpo en bruto; debe ir antes de express.json(). */
+app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter);
 app.use(
   cors({
     origin(origin, callback) {
@@ -47,6 +51,7 @@ app.use(
 
 app.use('/health', healthRouter);
 app.use('/v1', accountRouter);
+app.use('/v1', billingRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Not found', code: 'NOT_FOUND' });

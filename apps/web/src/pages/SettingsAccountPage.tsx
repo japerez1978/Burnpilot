@@ -149,6 +149,11 @@ export function SettingsAccountPage() {
         <p className="mt-1 text-sm text-fg-muted">
           Datos guardados en <code className="font-mono text-fg-primary">public.profiles</code>.
         </p>
+        <p className="mt-2 text-sm">
+          <Link to="/settings/billing" className="font-medium text-accent-green hover:underline">
+            Facturación y planes (Stripe)
+          </Link>
+        </p>
       </header>
 
       {profileQuery.isLoading ? (
