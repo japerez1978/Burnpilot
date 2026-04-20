@@ -6,9 +6,10 @@
 -- Tabla: stack_snapshots
 -- Guarda hasta MAX_SNAPSHOTS lecturas históricas de burn rate por proyecto.
 -- Se inserta automáticamente vía trigger cuando cambia project_tools.
+-- Idempotente: re-ejecutar en Supabase si la tabla ya existía de un intento previo.
 -- ---------------------------------------------------------------------------
 
-create table public.stack_snapshots (
+create table if not exists public.stack_snapshots (
   id            uuid        primary key default gen_random_uuid(),
   project_id    uuid        not null references public.projects(id) on delete cascade,
   monthly_burn_base_cents bigint  not null default 0,
@@ -17,13 +18,12 @@ create table public.stack_snapshots (
   captured_at   timestamptz not null default now()
 );
 
--- Índice para lecturas rápidas por proyecto ordenadas por fecha
-create index idx_stack_snapshots_project_time
+create index if not exists idx_stack_snapshots_project_time
   on public.stack_snapshots(project_id, captured_at desc);
 
--- RLS: cada usuario solo ve snapshots de sus propios proyectos
 alter table public.stack_snapshots enable row level security;
 
+drop policy if exists "stack_snapshots: read own" on public.stack_snapshots;
 create policy "stack_snapshots: read own"
   on public.stack_snapshots for select
   using (
@@ -33,7 +33,7 @@ create policy "stack_snapshots: read own"
     )
   );
 
--- Service role puede insertar (usado por el trigger)
+drop policy if exists "stack_snapshots: service insert" on public.stack_snapshots;
 create policy "stack_snapshots: service insert"
   on public.stack_snapshots for insert
   with check (true);
@@ -124,7 +124,7 @@ begin
 end;
 $$;
 
--- Trigger en project_tools
+drop trigger if exists trg_project_tools_snapshot on public.project_tools;
 create trigger trg_project_tools_snapshot
   after insert or update or delete
   on public.project_tools

@@ -55,6 +55,8 @@ type Props = {
   editing: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
   /** Fila actual de `tools` (p. ej. tras refetch); evita datos obsoletos al fusionar `pending_*`. */
   editingLive?: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
+  /** Alta nueva desde Stacks u otra pantalla: nombre y proyecto opcional. */
+  initialCreatePreset?: { name?: string; projectId?: string | null } | null;
   categories: CategoryRow[];
   projects: ProjectRow[];
 };
@@ -77,6 +79,7 @@ export function ToolFormModal({
   userId,
   editing,
   editingLive,
+  initialCreatePreset,
   categories,
   projects,
 }: Props) {
@@ -169,8 +172,12 @@ export function ToolFormModal({
       return;
     }
 
+    const presetPid = initialCreatePreset?.projectId;
+    const hasPresetProject =
+      typeof presetPid === 'string' && projects.some((pr) => pr.id === presetPid);
+
     reset({
-      name: '',
+      name: initialCreatePreset?.name ?? '',
       vendor: '',
       categoryId: categories[0]?.id ?? 1,
       planLabel: '',
@@ -181,11 +188,11 @@ export function ToolFormModal({
       state: 'active',
       perceivedUsefulness: '',
       notes: '',
-      assignmentMode: 'none',
-      singleProjectId: null,
+      assignmentMode: hasPresetProject ? 'single' : 'none',
+      singleProjectId: hasPresetProject ? presetPid! : null,
       sharedAllocations: [],
     });
-  }, [open, editing, editingLive, categories, reset, profileQuery.data]);
+  }, [open, editing, editingLive, categories, reset, profileQuery.data, initialCreatePreset, projects]);
 
   useEffect(() => {
     if (editing) return;

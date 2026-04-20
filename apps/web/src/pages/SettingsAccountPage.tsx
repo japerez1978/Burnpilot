@@ -26,6 +26,10 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function csvEscapeCell(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 function parseBudgetToCents(raw: string): number | null {
   const s = raw.trim();
   if (!s) return null;
@@ -40,8 +44,50 @@ export function SettingsAccountPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const profileQuery = useProfileQuery();
+
+  async function handleExportToolsCsv() {
+    setExportError(null);
+    setExportLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('tools')
+        .select('name, vendor, plan_label, amount_cents, currency, periodicity, state, last_renewal_at')
+        .is('deleted_at', null)
+        .order('name');
+      if (error) throw error;
+      const headers = [
+        'name',
+        'vendor',
+        'plan_label',
+        'amount_cents',
+        'currency',
+        'periodicity',
+        'state',
+        'last_renewal_at',
+      ] as const;
+      const lines = [headers.join(',')];
+      for (const row of data ?? []) {
+        const r = row as Record<string, string | number | null>;
+        lines.push(headers.map((h) => csvEscapeCell(String(r[h] ?? ''))).join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `burnpilot-tools-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'No se pudo exportar.');
+    } finally {
+      setExportLoading(false);
+    }
+  }
 
   const {
     register,
@@ -240,6 +286,38 @@ export function SettingsAccountPage() {
           </div>
         </form>
       )}
+
+      {profileQuery.data ? (
+        <section className="mb-8 rounded-xl border border-bg-border bg-bg-card p-6">
+          <h2 className="text-lg font-semibold text-fg-primary">Exportar datos</h2>
+          <p className="mt-1 text-sm text-fg-muted">
+            Descarga un CSV con tus herramientas (columnas principales). Disponible en plan Pro o Lifetime.
+          </p>
+          {['pro', 'lifetime'].includes(profileQuery.data.plan_tier) ? (
+            <div className="mt-4">
+              <ButtonSecondary
+                type="button"
+                disabled={exportLoading}
+                onClick={() => void handleExportToolsCsv()}
+              >
+                {exportLoading ? 'Generando…' : 'Descargar CSV de herramientas'}
+              </ButtonSecondary>
+              {exportError ? (
+                <p className="mt-2 text-sm text-accent-red" role="alert">
+                  {exportError}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-fg-muted">
+              <Link to="/settings/billing" className="text-accent-green hover:underline">
+                Suscríbete a Pro
+              </Link>{' '}
+              para desbloquear la exportación.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       {profileQuery.data ? (
         <section className="rounded-xl border border-accent-red/30 bg-bg-card p-6">

@@ -3,13 +3,13 @@
 > **Propósito:** handoff rápido entre herramientas, agentes o personas.  
 > **Mantenimiento:** ver § *Política de mantenimiento* al final (equilibrio eficacia / precisión).
 
-**Última actualización:** 2026-04-20
+**Última actualización:** 2026-04-19
 
 ---
 
 ## Resumen en una frase
 
-**Sprints 0–4** cerrados en repo y validados en local (incl. borrado de cuenta extremo a extremo). **Sprint 5** (Stripe + gating) es el siguiente cuando se retome el desarrollo.
+**Sprints 0–6** cerrados en código y documentados ([docs/sprint6_closeout.md](sprint6_closeout.md)). **Sprint 7** (landing + go-live) es el siguiente hito cuando se retome.
 
 **Repo GitHub:** `main` sincronizado con `origin` (commit `c2b95a4` y anteriores). Remoto: `https://github.com/japerez1978/burnpilot.git` — si GitHub avisa de redirect al nombre `Burnpilot.git`, se puede alinear con `git remote set-url origin <url_canónica>`.
 
@@ -26,6 +26,8 @@
 | **Sprint 2** | Hecho (ver QA RLS) | Migración `20250420000001_tools_projects_categories.sql` + web tools/proyectos. |
 | **Sprint 3** | Hecho (SQL + app) | `20250421000001_dashboard_rpc.sql`: KPIs, **`/dashboard`**, **`/projects/:id`**, Recharts. |
 | **Sprint 4** | Hecho (SQL + app + QA local) | Alertas, **`/savings`**, onboarding, **`DELETE /v1/account`** (purge `public.*` + Auth); API con `loadEnv`, CORS dev. Ver § *Hardening de cierre* abajo. |
+| **Sprint 5** | Hecho en repo | Stripe Checkout / Portal / webhook, **`/settings/billing`**, `subscriptions_billing`; gating según `plan_tier`. |
+| **Sprint 6** | Hecho (SECONDARY) | Stacks: migraciones **29–30**, **`/stacks`**, `stack_comparison`, “Aplicar” vía enlace a **`/tools`** con `prefillName` + `assignProject`; dashboard: histórico global 6m; CSV Pro en cuenta. Detalle: [docs/sprint6_closeout.md](sprint6_closeout.md). |
 
 ---
 
@@ -33,9 +35,7 @@
 
 | Prioridad | Sprint | Objetivo |
 |-----------|--------|----------|
-| **Pausa** | — | Sin sprint en ejecución hasta nueva sesión (2026-04-19). |
-| **Siguiente** | **Sprint 5** | Billing Stripe + gating. |
-| Después | — | Histórico real `dashboard_history`, refinar alertas. |
+| **Siguiente** | **Sprint 7** | Landing + go-live (ver `burnpilot_plan.md` §19). |
 
 **Congelado / fuera de plan actual:** agente n8n + scraping + BurnIntel → [docs/future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md).
 
@@ -50,7 +50,8 @@
 - `/projects/:id` — burn del proyecto + alertas (`rpc project_summary`)  
 - `/tools` — CRUD herramientas (requiere sesión): columna **Estado**, colores por estado, **filtro desplegable** multi-estado, coste mensual centrado, importe **0** o vacío = plan gratuito  
 - `/savings` — plan de ahorro (`rpc savings_plan`)  
-- `/settings/account` — perfil + **eliminar cuenta** (requiere API con service role)
+- `/stacks` — biblioteca Recommended Stacks + comparar con un proyecto (`rpc stack_comparison`)  
+- `/settings/account` — perfil + **export CSV** (Pro/Lifetime) + **eliminar cuenta** (requiere API con service role)
 
 **Migraciones (aplicar en orden en Supabase):**  
 `20250418000001_init_profiles.sql` → `public.profiles`  
@@ -60,7 +61,9 @@
 `20250423000001_expand_tool_categories.sql` → categorías 9–16 + plantillas  
 `20250424000001_category_frontend_deploy.sql` → categoría 17 «Frontend / despliegue» + plantillas Vercel/Netlify/CF  
 `20250425000001_tools_allow_zero_amount.sql` → `amount_cents >= 0` (planes free)  
-`20250426000001_ensure_category_front_deploy.sql` → idempotente por si faltó la 240 (categoría 17 + `UPDATE` plantillas)
+`20250426000001_ensure_category_front_deploy.sql` → idempotente por si faltó la 240 (categoría 17 + `UPDATE` plantillas)  
+`20250429000001_sprint6_stack_snapshots.sql` → `stack_snapshots`, `project_history`, `dashboard_history` (histórico real)  
+`20250430000001_recommended_stacks.sql` → `recommended_stacks`, ítems, `stack_comparison`
 
 **API (Railway / local):** `DELETE /v1/account` — JWT en header; en servidor: purge ordenado de `tools` → `projects` → `profiles`, luego `auth.admin.deleteUser`. Variables: `apps/api/.env` cargado vía **`src/loadEnv.ts`** (varias rutas posibles según `cwd` del monorepo).
 
@@ -125,6 +128,7 @@ npm run dev                       # web + api (necesario para borrar cuenta)
 | [AGENTS.md](../AGENTS.md) | Especificación P1–P14 del proyecto |
 | [product_backlog_moscow.md](product_backlog_moscow.md) | Backlog MoSCoW (ideas; no es scope hasta promoción explícita) |
 | [burnpilot_plan.md](burnpilot_plan.md) | Plan maestro v1.3 |
+| [sprint6_closeout.md](sprint6_closeout.md) | Cierre Sprint 6 (entregables + operativa) |
 | [future/burnintel-n8n-agent.md](future/burnintel-n8n-agent.md) | Idea archivada |
 | [runbook.md](runbook.md) | Operativa / troubleshooting |
 
@@ -132,8 +136,8 @@ npm run dev                       # web + api (necesario para borrar cuenta)
 
 ## Criterio de éxito inmediato (cuando se retome)
 
-1. **Sprint 5:** Stripe (Checkout, webhooks, `plan_tier` / portal).  
-2. Opcional antes de producción: API en Railway con env + `VITE_API_URL` al dominio de la API; hardening completo §P12.
+1. **Sprint 7:** landing pública, Sentry/Umami/Better Stack según plan, legal, runbook.  
+2. Migraciones **29–30** deben estar aplicadas en el proyecto Supabase activo antes de validar Stacks/histórico en producción.
 
 ---
 

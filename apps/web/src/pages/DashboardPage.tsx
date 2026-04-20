@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatCents } from '@burnpilot/utils';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { AlertList } from '@/components/alerts/AlertList';
+import { GlobalBurnHistoryChart } from '@/components/dashboard/GlobalBurnHistoryChart';
 import { ButtonSecondary } from '@/components/ui/Button';
+import { useDashboardHistoryQuery } from '@/hooks/useDashboardHistoryQuery';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
 import type { DashboardSummary } from '@/lib/dashboardRpc';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
@@ -14,6 +16,8 @@ export function DashboardPage() {
   const user = useSessionStore((s) => s.session?.user);
   const configured = isSupabaseConfigured();
   const profileQuery = useProfileQuery();
+
+  const historyQuery = useDashboardHistoryQuery(6);
 
   const dashQuery = useQuery({
     queryKey: ['dashboard-summary', user?.id],
@@ -206,6 +210,26 @@ export function DashboardPage() {
           </section>
 
           <section className="rounded-xl border border-bg-border bg-bg-card p-5">
+            <h2 className="text-sm font-medium text-fg-muted">Evolución del burn (últimos meses)</h2>
+            <p className="mt-1 text-xs text-fg-muted">
+              Agregado de snapshots por proyecto (al cambiar asignaciones). Sin datos suficientes se repite el
+              total actual.
+            </p>
+            {historyQuery.isLoading ? (
+              <p className="mt-4 text-sm text-fg-muted">Cargando histórico…</p>
+            ) : historyQuery.isError ? (
+              <p className="mt-4 text-sm text-accent-amber">
+                No se pudo cargar el histórico. Aplica las migraciones Sprint 3 y Sprint 6 (snapshots) en
+                Supabase.
+              </p>
+            ) : (
+              <div className="mt-4">
+                <GlobalBurnHistoryChart points={historyQuery.data ?? []} currency={currency} />
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-bg-border bg-bg-card p-5">
             <h2 className="text-sm font-medium text-fg-muted">Renovaciones próximos 7 días</h2>
             {dash.renewals_next_7d.length === 0 ? (
               <p className="mt-3 text-sm text-fg-muted">Ninguna en esta ventana.</p>
@@ -220,11 +244,6 @@ export function DashboardPage() {
               </ul>
             )}
           </section>
-
-          <p className="text-xs text-fg-muted">
-            Histórico 6m en gráfico: fase posterior (stub SQL{' '}
-            <code className="font-mono">dashboard_history</code>).
-          </p>
         </div>
       ) : null}
     </div>

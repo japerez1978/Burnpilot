@@ -13,6 +13,7 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { SavingsPage } from '@/pages/SavingsPage';
 import { SettingsAccountPage } from '@/pages/SettingsAccountPage';
 import { SettingsBillingPage } from '@/pages/SettingsBillingPage';
+import { StacksPage } from '@/pages/StacksPage';
 import { ProjectDashboardPage } from '@/pages/ProjectDashboardPage';
 import { ToolsPage } from '@/pages/ToolsPage';
 
@@ -44,6 +45,7 @@ export function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/projects/:id" element={<ProjectDashboardPage />} />
             <Route path="/tools" element={<ToolsPage />} />
+            <Route path="/stacks" element={<StacksPage />} />
             <Route path="/savings" element={<SavingsPage />} />
             <Route path="/settings/account" element={<SettingsAccountPage />} />
             <Route path="/settings/billing" element={<SettingsBillingPage />} />

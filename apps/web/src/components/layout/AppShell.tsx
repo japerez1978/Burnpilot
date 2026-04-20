@@ -1,11 +1,12 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { CreditCard, Flame, LayoutDashboard, PiggyBank, Settings, Wrench } from 'lucide-react';
+import { CreditCard, Flame, LayoutDashboard, Layers, PiggyBank, Settings, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProjectSidebarSection } from '@/components/projects/ProjectSidebarSection';
 
 const nav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tools', label: 'Herramientas', icon: Wrench },
+  { to: '/stacks', label: 'Stacks', icon: Layers },
   { to: '/savings', label: 'Ahorro', icon: PiggyBank },
   { to: '/settings/account', label: 'Cuenta', icon: Settings },
   { to: '/settings/billing', label: 'Facturación', icon: CreditCard },

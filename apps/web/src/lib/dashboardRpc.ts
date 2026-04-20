@@ -32,6 +32,12 @@ export type DashboardRenewalRow = {
   next_renewal_date: string;
 };
 
+/** Puntos mensuales de `dashboard_history` (Sprint 6). */
+export type DashboardHistoryPoint = {
+  month: string;
+  total_base_cents: number;
+};
+
 export type DashboardSummary = {
   display_currency: string;
   monthly_budget_cents: number | null;
@@ -54,6 +60,42 @@ export type SavingsCandidate = {
 export type SavingsPlan = {
   potential_monthly_savings_cents: number;
   candidates: SavingsCandidate[];
+};
+
+/** Sprint 6 — Recommended Stacks */
+export type RecommendedStackItemRow = {
+  label: string;
+  sort_order: number;
+};
+
+export type RecommendedStackRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  monthly_estimate_cents: number;
+  last_reviewed_at: string | null;
+  sort_order: number;
+  recommended_stack_items?: RecommendedStackItemRow[];
+};
+
+export type StackComparisonRow = {
+  item_label: string;
+  matched: boolean;
+  matched_tool_name: string | null;
+};
+
+export type StackComparisonResult = {
+  stack: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    monthly_estimate_cents: number;
+    last_reviewed_at: string | null;
+  };
+  project_monthly_cents: number;
+  rows: StackComparisonRow[];
 };
 
 export type ProjectSummary = {

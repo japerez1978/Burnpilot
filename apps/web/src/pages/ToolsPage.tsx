@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { formatCents, toolRowMonthlyBurnCentsClient, type Periodicity } from '@burnpilot/utils';
 import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -82,8 +83,10 @@ export function ToolsPage() {
   const profileQuery = useProfileQuery();
   const configured = isSupabaseConfigured();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ToolListRow | null>(null);
+  const [createPreset, setCreatePreset] = useState<{ name?: string; projectId?: string } | null>(null);
   const [visibleStates, setVisibleStates] = useState<Record<ToolStateKey, boolean>>(() => ({
     trial: true,
     active: true,
@@ -170,6 +173,28 @@ export function ToolsPage() {
     () => categories.length > 0 && categoriesQuery.isSuccess,
     [categories.length, categoriesQuery.isSuccess],
   );
+
+  useEffect(() => {
+    const rawName = searchParams.get('prefillName');
+    const assignProject = searchParams.get('assignProject');
+    if (!rawName?.trim() || !readyForModal) return;
+    const name = decodeURIComponent(rawName.trim());
+    setCreatePreset({
+      name,
+      projectId: assignProject?.trim() || undefined,
+    });
+    setEditing(null);
+    setModalOpen(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('prefillName');
+        next.delete('assignProject');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, readyForModal, setSearchParams]);
 
   const rawTools = toolsQuery.data ?? [];
   const displayedTools = useMemo(() => {
@@ -379,8 +404,10 @@ export function ToolsPage() {
           onClose={() => {
             setModalOpen(false);
             setEditing(null);
+            setCreatePreset(null);
           }}
           userId={user.id}
+          initialCreatePreset={createPreset}
           editing={
             editing
               ? {
