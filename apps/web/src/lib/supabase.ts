@@ -12,10 +12,26 @@ function normalizeSupabaseProjectUrl(raw: string): string {
 
 function looksLikeSupabaseAnonKey(key: string): boolean {
   const t = key.trim();
-  // Publishable (sb_…) o JWT anon (eyJ…) suelen ser largas; placeholders del tutorial suelen ser cortos o llevan <>.
+  // Claves publicables nuevas (sb_publishable_…); JWT anon legacy (eyJ…) suelen ser largas.
+  if (t.startsWith('sb_publishable_') && t.length >= 40) return true;
   if (t.length < 32) return false;
   if (/[<>]/.test(t) || /completa del dashboard/i.test(t)) return false;
   return true;
+}
+
+/** Sin secretos: solo ayuda a ver si el último build de Vite recibió las vars (p. ej. Netlify). */
+export function getSupabaseConfigDebug(): {
+  urlPresent: boolean;
+  keyLength: number;
+  keyLooksValid: boolean;
+} {
+  const url = normalizeSupabaseProjectUrl(import.meta.env.VITE_SUPABASE_URL ?? '');
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '';
+  return {
+    urlPresent: Boolean(url),
+    keyLength: key.length,
+    keyLooksValid: looksLikeSupabaseAnonKey(key),
+  };
 }
 
 export function isSupabaseConfigured(): boolean {

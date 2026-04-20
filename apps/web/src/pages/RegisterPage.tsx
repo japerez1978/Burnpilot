@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
+import { SupabaseEnvMissing } from '@/components/auth/SupabaseEnvMissing';
 import { Button, ButtonSecondary } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { getAuthSiteOrigin } from '@/lib/authSiteOrigin';
@@ -31,19 +32,10 @@ export function RegisterPage() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <AuthLayout
+      <SupabaseEnvMissing
         title="Crear cuenta"
-        subtitle="Configura Supabase en .env.local para registrarte."
-      >
-        <p className="text-sm text-accent-amber">
-          Añade <code className="font-mono text-fg-primary">VITE_SUPABASE_URL</code> y{' '}
-          <code className="font-mono text-fg-primary">VITE_SUPABASE_ANON_KEY</code> del proyecto
-          Supabase que ya usas.
-        </p>
-        <Link to="/" className="block text-center text-sm text-accent-green hover:underline">
-          Volver al inicio
-        </Link>
-      </AuthLayout>
+        subtitle="Faltan variables de Supabase en el entorno del build (Vite)."
+      />
     );
   }
 
