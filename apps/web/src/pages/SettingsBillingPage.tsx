@@ -4,6 +4,7 @@ import { CreditCard, ExternalLink } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, ButtonSecondary } from '@/components/ui/Button';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
+import { useBillingQuery, type BillingRow } from '@/hooks/useBillingQuery';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useSessionStore } from '@/store/sessionStore';
 
@@ -15,6 +16,42 @@ function planLabel(tier: string): string {
       return 'Lifetime';
     default:
       return 'Free';
+  }
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+/** Devuelve una frase descriptiva del estado de la suscripción a partir de la fila de subscriptions_billing. */
+function subscriptionStatusLine(row: BillingRow | null, tier: string): string | null {
+  if (tier === 'lifetime') return 'Lifetime — sin renovación.';
+  if (!row) return null;
+  const when = formatDate(row.current_period_end);
+  if (row.cancel_at_period_end && row.status === 'active') {
+    return `Cancelada — mantienes Pro hasta el ${when}.`;
+  }
+  switch (row.status) {
+    case 'active':
+      return `Se renueva el ${when}.`;
+    case 'trialing':
+      return `En prueba — termina el ${when}.`;
+    case 'past_due':
+      return 'Pago fallido — actualiza tu método en el portal.';
+    case 'canceled':
+      return 'Suscripción cancelada.';
+    case 'incomplete':
+    case 'incomplete_expired':
+      return 'Pago incompleto — inicia el checkout de nuevo.';
+    case 'unpaid':
+      return 'Pago pendiente — revisa el portal.';
+    default:
+      return null;
   }
 }
 
@@ -48,6 +85,7 @@ async function apiPost(path: string, body?: Record<string, unknown>): Promise<{ 
 export function SettingsBillingPage() {
   const user = useSessionStore((s) => s.session?.user);
   const profileQuery = useProfileQuery();
+  const billingQuery = useBillingQuery();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutFlash = searchParams.get('checkout');
@@ -55,6 +93,7 @@ export function SettingsBillingPage() {
   useEffect(() => {
     if (checkoutFlash === 'success' && user?.id) {
       void queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      void queryClient.invalidateQueries({ queryKey: ['billing', user.id] });
     }
   }, [checkoutFlash, user?.id, queryClient]);
 
@@ -81,6 +120,8 @@ export function SettingsBillingPage() {
 
   const tier = profileQuery.data?.plan_tier ?? 'free';
   const loading = profileQuery.isLoading;
+  const billing = billingQuery.data ?? null;
+  const statusLine = subscriptionStatusLine(billing, tier);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -117,8 +158,26 @@ export function SettingsBillingPage() {
         {loading ? (
           <p className="mt-2 text-sm text-fg-muted">Cargando…</p>
         ) : (
-          <p className="mt-2 text-lg font-semibold text-fg-primary">{planLabel(tier)}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-lg font-semibold text-fg-primary">{planLabel(tier)}</p>
+            {billing?.cancel_at_period_end && billing.status === 'active' ? (
+              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
+                Cancelada
+              </span>
+            ) : null}
+            {billing?.status === 'past_due' ? (
+              <span className="rounded-full border border-accent-red/40 bg-accent-red/10 px-2 py-0.5 text-xs font-medium text-accent-red">
+                Pago fallido
+              </span>
+            ) : null}
+            {billing?.status === 'trialing' ? (
+              <span className="rounded-full border border-accent-green/40 bg-accent-green/10 px-2 py-0.5 text-xs font-medium text-accent-green">
+                En prueba
+              </span>
+            ) : null}
+          </div>
         )}
+        {statusLine ? <p className="mt-2 text-sm text-fg-muted">{statusLine}</p> : null}
         <p className="mt-2 text-sm text-fg-muted">
           {user?.email ? (
             <>
