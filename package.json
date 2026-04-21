@@ -22,7 +22,8 @@
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "go-live:check": "node scripts/go-live-check.mjs"
+    "go-live:check": "node scripts/go-live-check.mjs",
+    "env:deploy-hints": "node scripts/export-env-for-deploy.mjs"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",

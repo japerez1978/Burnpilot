@@ -1,7 +1,7 @@
 # BurnPilot — entorno de producción (referencia)
 
 > **Sin secretos.** Solo topología, URLs públicas y convenciones.  
-> **Última revisión:** 2026-04-20
+> **Última revisión:** 2026-04-21
 
 ## Resumen
 
@@ -11,7 +11,7 @@ MVP desplegado y probado end-to-end: **web (Netlify)** ↔ **Supabase (Auth + Po
 
 | Capa | Servicio / rol | Notas |
 |------|-----------------|--------|
-| Frontend | Netlify | Build: `npm ci && npm run build -w @burnpilot/web`; publish `apps/web/dist`. Ver `apps/web/netlify.toml`. |
+| Frontend | Netlify | Build: `npm ci && npm run build:web`; publish `apps/web/dist`. Ver `netlify.toml` en la **raíz** del monorepo (Base directory del sitio vacío). |
 | API | Railway | Servicio Node (`@burnpilot/api`); arranque `node apps/api/dist/server.js`. Ver `railway.json` en raíz. |
 | Dominio API | `api.burnpilot.app` | HTTPS; health: `GET /health` → JSON `ok`, `service: burnpilot-api`. |
 | Auth + DB | Supabase | Proyecto dedicado; migraciones `supabase/migrations/` en orden. |

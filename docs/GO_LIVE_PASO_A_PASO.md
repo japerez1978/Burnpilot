@@ -17,7 +17,17 @@ Rellena valores reales (Supabase, Stripe, URLs). Luego:
 npm run go-live:check
 ```
 
-Cuando pase sin errores, las mismas claves y valores (sin comillas raras) van a Netlify y Railway. Para simular producción:
+Cuando pase sin errores, las mismas claves y valores (sin comillas raras) van a Netlify y Railway.
+
+**Sacar bloques listos para pegar** (solo en tu Mac, no compartas la salida):
+
+```bash
+npm run env:deploy-hints
+npm run env:deploy-hints -- --netlify   # solo VITE_*
+npm run env:deploy-hints -- --railway   # solo API
+```
+
+Para simular producción:
 
 ```bash
 npm run go-live:check -- --production
@@ -33,6 +43,10 @@ npm run go-live:check -- --production
    - **Site URL:** `https://app.burnpilot.app` (o tu dominio Netlify definitivo).
    - **Redirect URLs:** añade `https://app.burnpilot.app/**`, `http://localhost:5173/**` si sigues desarrollando.
 4. **Settings → API:** copia **Project URL** y **anon/public key** → ya deben coincidir con `VITE_SUPABASE_*` y `SUPABASE_*` en tus env.
+
+### Datos en la base de datos (importante)
+
+Lo que ves en local (herramientas, proyectos, filas en tablas) vive en **tu** instancia de Postgres (normalmente el proyecto Supabase que usas en desarrollo). **Producción** usa otro despliegue / otro proyecto: las tablas pueden estar vacías aunque las variables estén bien. Las migraciones crean el esquema; los datos hay que crearlos de nuevo en producción o migrarlos con cuidado (dump/restore entre proyectos solo si sabes lo que haces).
 
 ---
 
@@ -50,16 +64,17 @@ npm run go-live:check -- --production
 
 ## 3. Frontend en Netlify
 
-1. [Netlify](https://app.netlify.com) → sitio del front → **Site configuration → Environment variables**.
-2. Añade (mismos nombres que en `apps/web/.env.local`):
+1. **Build:** el repo tiene `netlify.toml` en la **raíz** del monorepo: `npm ci && npm run build:web`, publish `apps/web/dist`. En Netlify → **Site configuration → Build settings**: **Base directory** vacío (raíz del repo), para que se use ese archivo.
+2. [Netlify](https://app.netlify.com) → sitio del front → **Site configuration → Environment variables**.
+3. Añade las mismas claves que en `apps/web/.env.local` (puedes generarlas con `npm run env:deploy-hints -- --netlify`):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_API_URL` = URL HTTPS de la API (Railway), **no** localhost.
-   - Opcional: `VITE_SENTRY_DSN`, `VITE_UMAMI_WEBSITE_ID`.
-3. **Deploys** → “Trigger deploy” para que Vite recompile con las variables.
-4. **Domain:** conecta `app.burnpilot.app` (o el dominio que uses) y SSL.
+   - Opcional: `VITE_AUTH_SITE_ORIGIN`, `VITE_SENTRY_DSN`, `VITE_UMAMI_WEBSITE_ID`.
+4. **Deploys** → “Trigger deploy” para que Vite recompile con las variables.
+5. **Domain:** conecta `app.burnpilot.app` (o el dominio que uses) y SSL.
 
-El build ya está definido en `apps/web/netlify.toml` (`npm ci && npm run build -w @burnpilot/web`, publish `apps/web/dist`).
+Los `.env` locales **no** se suben a Git: hay que copiarlos a mano (o con el script de arriba) a Netlify y Railway.
 
 ---
 

@@ -146,9 +146,15 @@ const webOk = checkSection(
 );
 const apiOk = checkSection('API (Railway)', 'apps/api/.env', apiKeys, [
   'RESEND_API_KEY',
+  'RESEND_FROM_EMAIL',
   'CRON_SECRET',
   'SENTRY_DSN',
   'BETTER_STACK_SOURCE_TOKEN',
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_MODEL',
+  'STACKOS_AGENT_URL',
+  'STACKOS_AGENT_API_KEY',
+  'STACKOS_AGENT_TIMEOUT_MS',
 ]);
 
 const allOk = webOk && apiOk;
