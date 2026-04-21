@@ -11,12 +11,16 @@ import {
   todayLocalIsoDate,
   type Periodicity,
 } from '@burnpilot/utils';
-import { Button } from '@/components/ui/Button';
+import { Sparkles } from 'lucide-react';
+import { Button, ButtonSecondary } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
+import { fetchToolsAiEnrich } from '@/lib/toolsAiApi';
 import { mergePendingTool } from '@/lib/mergePendingTool';
 import { parseMajorToCents } from '@/lib/money';
 import { getSupabaseClient } from '@/lib/supabase';
+import { useSessionStore } from '@/store/sessionStore';
+import type { ToolsAiEnrichData } from '@burnpilot/types';
 
 type CategoryRow = { id: number; name: string; slug: string };
 type ProjectRow = { id: string; name: string };
@@ -55,8 +59,8 @@ type Props = {
   editing: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
   /** Fila actual de `tools` (p. ej. tras refetch); evita datos obsoletos al fusionar `pending_*`. */
   editingLive?: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
-  /** Alta nueva desde Stacks u otra pantalla: nombre y proyecto opcional. */
-  initialCreatePreset?: { name?: string; projectId?: string | null } | null;
+  /** Alta nueva desde Stacks u otra pantalla: nombre, proyecto y categoría opcionales. */
+  initialCreatePreset?: { name?: string; projectId?: string | null; categoryId?: number } | null;
   categories: CategoryRow[];
   projects: ProjectRow[];
 };
@@ -84,7 +88,12 @@ export function ToolFormModal({
   projects,
 }: Props) {
   const queryClient = useQueryClient();
+  const session = useSessionStore((s) => s.session);
   const [scheduleNextRenewal, setScheduleNextRenewal] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPreview, setAiPreview] = useState<ToolsAiEnrichData | null>(null);
+  const [overwriteAiNotes, setOverwriteAiNotes] = useState(true);
   /** Misma fuente que el resto de la app — no usar otra query con la misma key (pisaba onboarding_completed_at). */
   const profileQuery = useProfileQuery();
 
@@ -92,6 +101,7 @@ export function ToolFormModal({
     register,
     handleSubmit,
     reset,
+    setValue,
     control,
     getValues,
     formState: { errors },
@@ -123,7 +133,12 @@ export function ToolFormModal({
   const assignmentMode = useWatch({ control, name: 'assignmentMode' });
 
   useEffect(() => {
-    if (open) setScheduleNextRenewal(false);
+    if (open) {
+      setScheduleNextRenewal(false);
+      setAiError(null);
+      setAiPreview(null);
+      setOverwriteAiNotes(true);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -175,11 +190,14 @@ export function ToolFormModal({
     const presetPid = initialCreatePreset?.projectId;
     const hasPresetProject =
       typeof presetPid === 'string' && projects.some((pr) => pr.id === presetPid);
+    const presetCat = initialCreatePreset?.categoryId;
+    const validPresetCat =
+      typeof presetCat === 'number' && categories.some((c) => c.id === presetCat);
 
     reset({
       name: initialCreatePreset?.name ?? '',
       vendor: '',
-      categoryId: categories[0]?.id ?? 1,
+      categoryId: validPresetCat ? presetCat : categories[0]?.id ?? 1,
       planLabel: '',
       amount: '',
       currency: baseCurrency as ToolFormValues['currency'],
@@ -353,6 +371,45 @@ export function ToolFormModal({
   });
 
   if (!open) return null;
+
+  const apiBase = import.meta.env.VITE_API_URL as string | undefined;
+  const canUseAi = Boolean(apiBase?.trim() && session?.access_token);
+
+  async function handleAiEnrich() {
+    setAiError(null);
+    const name = getValues('name')?.trim();
+    if (!name) {
+      setAiError('Escribe al menos el nombre de la herramienta.');
+      return;
+    }
+    if (!canUseAi || !apiBase || !session?.access_token) {
+      setAiError('Configura VITE_API_URL e inicia sesión.');
+      return;
+    }
+    setAiBusy(true);
+    try {
+      const data = await fetchToolsAiEnrich(apiBase, session.access_token, {
+        name,
+        vendor: getValues('vendor')?.trim() || undefined,
+        notes: getValues('notes')?.trim() || undefined,
+        categories,
+      });
+      setValue('categoryId', data.categoryId, { shouldValidate: true });
+      if (overwriteAiNotes) {
+        setValue('notes', data.notes, { shouldValidate: true });
+      }
+      const firstPlan = data.pricing.plans[0];
+      if (firstPlan?.name) {
+        setValue('planLabel', firstPlan.name.slice(0, 120), { shouldValidate: true });
+      }
+      setAiPreview(data);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'IA no disponible.');
+      setAiPreview(null);
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   const rawForModal = editing ? (editingLive ?? editing) : null;
   const futurePending =
@@ -535,6 +592,55 @@ export function ToolFormModal({
               className="w-full rounded-lg border border-bg-border bg-bg-base px-3 py-2 text-sm text-fg-primary"
               {...register('notes')}
             />
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-bg-border border-dashed bg-bg-base/30 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Sugerencias IA</p>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+              <input
+                type="checkbox"
+                className="rounded border-bg-border text-accent-green focus:ring-accent-green"
+                checked={overwriteAiNotes}
+                onChange={(e) => setOverwriteAiNotes(e.target.checked)}
+              />
+              Sobrescribir notas con el texto sugerido
+            </label>
+            <ButtonSecondary
+              type="button"
+              disabled={!canUseAi || aiBusy}
+              className="w-full sm:w-auto"
+              onClick={() => void handleAiEnrich()}
+            >
+              <Sparkles className="mr-1.5 inline h-4 w-4 text-purple-400" />
+              {aiBusy ? 'Consultando IA…' : 'Sugerir con IA (notas, categoría, planes)'}
+            </ButtonSecondary>
+            {!canUseAi ? (
+              <p className="text-xs text-fg-muted">
+                Necesitas <code className="font-mono">VITE_API_URL</code> y la API con{' '}
+                <code className="font-mono">ANTHROPIC_API_KEY</code>.
+              </p>
+            ) : null}
+            {aiError ? <p className="text-sm text-accent-amber">{aiError}</p> : null}
+            {aiPreview ? (
+              <div className="space-y-2 border-t border-bg-border pt-2 text-xs text-fg-muted">
+                <p>
+                  Scores (1–100): precio {aiPreview.scores.precio} · eficacia {aiPreview.scores.eficacia} ·
+                  sencillez {aiPreview.scores.sencillez}
+                </p>
+                <p className="text-fg-primary">{aiPreview.pricing.summary}</p>
+                {aiPreview.pricing.plans.length > 0 ? (
+                  <ul className="list-inside list-disc space-y-0.5">
+                    {aiPreview.pricing.plans.map((p) => (
+                      <li key={p.name}>
+                        <span className="font-medium text-fg-primary">{p.name}</span>: {p.priceHint}
+                        {p.billing ? ` (${p.billing})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="italic text-fg-muted">{aiPreview.disclaimer}</p>
+              </div>
+            ) : null}
           </div>
 
           <fieldset className="space-y-3 rounded-lg border border-bg-border bg-bg-base/40 p-3">

@@ -9,6 +9,8 @@ import { healthRouter } from './routes/health';
 import { accountRouter } from './routes/account';
 import { billingRouter } from './routes/billing';
 import { stripeWebhookRouter } from './routes/stripeWebhook';
+import { stackosRouter } from './routes/stackos';
+import { toolsAiRouter } from './routes/toolsAi';
 
 const config = loadConfig();
 const app = express();
@@ -52,6 +54,8 @@ app.use(
 app.use('/health', healthRouter);
 app.use('/v1', accountRouter);
 app.use('/v1', billingRouter);
+app.use('/v1', stackosRouter);
+app.use('/v1', toolsAiRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: 'Not found', code: 'NOT_FOUND' });

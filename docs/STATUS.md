@@ -3,7 +3,7 @@
 > **Propósito:** handoff rápido entre herramientas, agentes o personas.  
 > **Mantenimiento:** ver § *Política de mantenimiento* al final (equilibrio eficacia / precisión).
 
-**Última actualización:** 2026-04-20
+**Última actualización:** 2026-04-21
 
 ---
 
@@ -29,6 +29,7 @@
 | **Sprint 5** | Hecho en repo | Stripe Checkout / Portal / webhook, **`/settings/billing`**, `subscriptions_billing`; gating según `plan_tier`. |
 | **Sprint 6** | Hecho (SECONDARY) | Stacks: migraciones **29–30**, **`/stacks`**, `stack_comparison`, “Aplicar” vía enlace a **`/tools`** con `prefillName` + `assignProject`; dashboard: histórico global 6m; CSV Pro en cuenta. Detalle: [docs/sprint6_closeout.md](sprint6_closeout.md). |
 | **Sprint 7** | Hecho + **prod verificada** | Igual que arriba + despliegue real documentado en [production_environment.md](production_environment.md). |
+| **Roadmappilot (post-S7)** | Hecho en repo | **`/roadmappilot`** (sidebar) + **`/stacks`** biblioteca; tablas `stackos_*`, scoring en `@burnpilot/utils`, `POST /v1/stackos/analyze` (Anthropic). Especificación: [stackos-spec.md](stackos-spec.md). Migración `20250431000001_stackos_roadmap.sql`. |
 
 ---
 
@@ -53,7 +54,7 @@
 - `/projects/:id` — burn del proyecto + alertas (`rpc project_summary`)  
 - `/tools` — CRUD herramientas (requiere sesión): columna **Estado**, colores por estado, **filtro desplegable** multi-estado, coste mensual centrado, importe **0** o vacío = plan gratuito  
 - `/savings` — plan de ahorro (`rpc savings_plan`)  
-- `/stacks` — biblioteca Recommended Stacks + comparar con un proyecto (`rpc stack_comparison`)  
+- `/stacks` — Recommended Stacks + `stack_comparison` (`/stacks/library` redirige aquí); **`/roadmappilot`** — Roadmappilot (viejos `/stacks/roadmap` y `/stackos` redirigen aquí)  
 - `/settings/account` — perfil + **export CSV** (Pro/Lifetime) + **eliminar cuenta** (requiere API con service role)
 
 **Migraciones (aplicar en orden en Supabase):**  
@@ -66,9 +67,10 @@
 `20250425000001_tools_allow_zero_amount.sql` → `amount_cents >= 0` (planes free)  
 `20250426000001_ensure_category_front_deploy.sql` → idempotente por si faltó la 240 (categoría 17 + `UPDATE` plantillas)  
 `20250429000001_sprint6_stack_snapshots.sql` → `stack_snapshots`, `project_history`, `dashboard_history` (histórico real)  
-`20250430000001_recommended_stacks.sql` → `recommended_stacks`, ítems, `stack_comparison`
+`20250430000001_recommended_stacks.sql` → `recommended_stacks`, ítems, `stack_comparison`  
+`20250431000001_stackos_roadmap.sql` → `stackos_roadmaps`, `stackos_items` + RLS
 
-**API (Railway / local):** `DELETE /v1/account` — JWT en header; en servidor: purge ordenado de `tools` → `projects` → `profiles`, luego `auth.admin.deleteUser`. Variables: `apps/api/.env` cargado vía **`src/loadEnv.ts`** (varias rutas posibles según `cwd` del monorepo).
+**API (Railway / local):** `DELETE /v1/account` — JWT en header; en servidor: purge ordenado de `tools` → `projects` → `profiles`, luego `auth.admin.deleteUser`. Variables: `apps/api/.env` cargado vía **`src/loadEnv.ts`** (varias rutas posibles según `cwd` del monorepo). Roadmappilot: `POST /v1/stackos/analyze` (requiere `ANTHROPIC_API_KEY`).
 
 ---
 

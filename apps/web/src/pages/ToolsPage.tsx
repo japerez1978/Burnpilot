@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import type { ToolsAiSuggestionItem } from '@burnpilot/types';
 import { formatCents, toolRowMonthlyBurnCentsClient, type Periodicity } from '@burnpilot/utils';
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { ChevronDown, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Button, ButtonSecondary } from '@/components/ui/Button';
 import type { ProjectToolEmbed, ToolRow } from '@/components/tools/ToolFormModal';
 import { ToolFormModal } from '@/components/tools/ToolFormModal';
 import { useProfileQuery } from '@/hooks/useProfileQuery';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
+import { fetchToolsAiSuggest } from '@/lib/toolsAiApi';
 import { useSessionStore } from '@/store/sessionStore';
 
 type CategoryRow = { id: number; name: string; slug: string };
@@ -79,14 +81,27 @@ function toolStateClass(state: string): string {
 }
 
 export function ToolsPage() {
-  const user = useSessionStore((s) => s.session?.user);
+  const session = useSessionStore((s) => s.session);
+  const user = session?.user;
   const profileQuery = useProfileQuery();
   const configured = isSupabaseConfigured();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ToolListRow | null>(null);
-  const [createPreset, setCreatePreset] = useState<{ name?: string; projectId?: string } | null>(null);
+  const [createPreset, setCreatePreset] = useState<{
+    name?: string;
+    projectId?: string;
+    categoryId?: number;
+  } | null>(null);
+  const [discoverCatId, setDiscoverCatId] = useState<number | null>(null);
+  const [discoverQuery, setDiscoverQuery] = useState('');
+  const [discoverBusy, setDiscoverBusy] = useState(false);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const [discoverData, setDiscoverData] = useState<{
+    suggestions: ToolsAiSuggestionItem[];
+    disclaimer: string;
+  } | null>(null);
   const [visibleStates, setVisibleStates] = useState<Record<ToolStateKey, boolean>>(() => ({
     trial: true,
     active: true,
@@ -164,6 +179,12 @@ export function ToolsPage() {
 
   const categories = categoriesQuery.data ?? [];
   const projects = projectsQuery.data ?? [];
+
+  useEffect(() => {
+    if (categories.length > 0 && discoverCatId == null) {
+      setDiscoverCatId(categories[0].id);
+    }
+  }, [categories, discoverCatId]);
   const displayCurrency =
     profileQuery.data?.display_currency && ['EUR', 'USD', 'GBP'].includes(profileQuery.data.display_currency)
       ? profileQuery.data.display_currency
@@ -232,6 +253,129 @@ export function ToolsPage() {
           Añadir
         </Button>
       </header>
+
+      {categories.length > 0 ? (
+        <details className="mt-6 rounded-xl border border-bg-border bg-bg-card">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-fg-primary [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-400" />
+              Explorar sugerencias (IA por categoría)
+            </span>
+          </summary>
+          <div className="space-y-4 border-t border-bg-border px-4 py-4">
+            <p className="text-xs text-fg-muted">
+              Elige categoría y opcionalmente afinar con texto. Los precios son orientativos: confirma en la web del
+              proveedor.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[12rem] space-y-1">
+                <label htmlFor="discover-cat" className="text-xs font-medium text-fg-muted">
+                  Categoría
+                </label>
+                <select
+                  id="discover-cat"
+                  className="w-full rounded-lg border border-bg-border bg-bg-base px-3 py-2 text-sm text-fg-primary"
+                  value={discoverCatId ?? ''}
+                  onChange={(e) => setDiscoverCatId(Number(e.target.value) || null)}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-[12rem] flex-1 space-y-1">
+                <label htmlFor="discover-q" className="text-xs font-medium text-fg-muted">
+                  Búsqueda (opcional)
+                </label>
+                <input
+                  id="discover-q"
+                  className="w-full rounded-lg border border-bg-border bg-bg-base px-3 py-2 text-sm text-fg-primary"
+                  placeholder="ej. deploy, email, facturación…"
+                  value={discoverQuery}
+                  onChange={(e) => setDiscoverQuery(e.target.value)}
+                />
+              </div>
+              <ButtonSecondary
+                type="button"
+                disabled={
+                  discoverBusy ||
+                  discoverCatId == null ||
+                  !import.meta.env.VITE_API_URL?.trim() ||
+                  !session?.access_token
+                }
+                onClick={() => void (async () => {
+                  const apiBase = import.meta.env.VITE_API_URL as string | undefined;
+                  if (!apiBase?.trim() || !session?.access_token || discoverCatId == null) return;
+                  setDiscoverError(null);
+                  setDiscoverBusy(true);
+                  try {
+                    const data = await fetchToolsAiSuggest(apiBase, session.access_token, {
+                      categoryId: discoverCatId,
+                      query: discoverQuery.trim() || undefined,
+                      limit: 6,
+                      categories,
+                    });
+                    setDiscoverData(data);
+                  } catch (e) {
+                    setDiscoverError(e instanceof Error ? e.message : 'Error al sugerir.');
+                    setDiscoverData(null);
+                  } finally {
+                    setDiscoverBusy(false);
+                  }
+                })()}
+              >
+                {discoverBusy ? 'Buscando…' : 'Buscar sugerencias'}
+              </ButtonSecondary>
+            </div>
+            {!import.meta.env.VITE_API_URL?.trim() || !session?.access_token ? (
+              <p className="text-xs text-fg-muted">
+                Requiere sesión y <code className="font-mono">VITE_API_URL</code> apuntando a la API con{' '}
+                <code className="font-mono">ANTHROPIC_API_KEY</code>.
+              </p>
+            ) : null}
+            {discoverError ? <p className="text-sm text-accent-amber">{discoverError}</p> : null}
+            {discoverData ? (
+              <div className="space-y-3">
+                <p className="text-xs italic text-fg-muted">{discoverData.disclaimer}</p>
+                <ul className="space-y-3">
+                  {discoverData.suggestions.map((s) => (
+                    <li
+                      key={`${s.name}-${s.vendor ?? ''}`}
+                      className="rounded-lg border border-bg-border bg-bg-base/50 p-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-fg-primary">{s.name}</p>
+                          {s.vendor ? <p className="text-xs text-fg-muted">{s.vendor}</p> : null}
+                          <p className="mt-1 text-fg-muted">{s.notes}</p>
+                          <p className="mt-2 text-xs text-fg-muted">
+                            Precio {s.scores.precio} · Eficacia {s.scores.eficacia} · Sencillez{' '}
+                            {s.scores.sencillez}
+                          </p>
+                          <p className="mt-1 text-xs text-fg-primary">{s.pricing.summary}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          className="shrink-0"
+                          onClick={() => {
+                            setCreatePreset({ name: s.name, categoryId: s.categoryId });
+                            setEditing(null);
+                            setModalOpen(true);
+                          }}
+                        >
+                          Añadir
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
 
       {!toolsQuery.isLoading && !toolsQuery.isError && rawTools.length > 0 ? (
         <div className="mt-6 flex flex-wrap items-center gap-3">

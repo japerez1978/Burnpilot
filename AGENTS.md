@@ -36,7 +36,7 @@ Backend:       Node 20 + Express + TypeScript en Railway (thin: billing, webhook
 Base de datos: Supabase (Postgres + Auth + RLS por user_id). Región eu-west-1. Cliente JS pineado a 2.49.1
 Auth:          Supabase Auth (email+password + Google OAuth + verificación obligatoria)
 Estado global: Zustand (sesión, plan); TanStack Query para datos de servidor
-Integraciones: Stripe (Checkout + Customer Portal + Webhook + Stripe Tax), Resend (email), Sentry, Better Stack (logs + uptime), Umami (analytics)
+Integraciones: Stripe (Checkout + Customer Portal + Webhook + Stripe Tax), Resend (email), Anthropic (Roadmappilot analyze, solo API Railway), agente HTTP externo opcional (Roadmappilot fase 2, `STACKOS_AGENT_URL`), Sentry, Better Stack (logs + uptime), Umami (analytics)
 Hosting frontend: Netlify (divergencia consciente del estándar Leadstodeals que marca Vercel; ver P13)
 Hosting backend:  Railway
 DNS / CDN:        Cloudflare
@@ -55,7 +55,8 @@ Recursos:     auth.users, public.profiles, public.tools, public.projects,
               public.project_tools, public.categories, public.fx_rates,
               public.subscriptions_billing, public.stripe_events,
               public.alerts_dismissed, public.recommended_stacks,
-              public.recommended_stack_items
+              public.recommended_stack_items, public.stackos_roadmaps,
+              public.stackos_items
 Endpoints vía SDK:
   - supabase.auth.*
   - supabase.from('<table>').select/insert/update/delete (filtrado por RLS)
@@ -100,6 +101,24 @@ CDN:          activo para frontend
 WAF:          NO activar "Bot fight mode" para no romper webhooks Stripe
 ```
 
+### Anthropic (Roadmappilot)
+
+```
+URL base:     https://api.anthropic.com/v1/messages
+Auth:         API key solo en Railway (ANTHROPIC_API_KEY)
+Uso:          POST /v1/stackos/analyze — ajuste de indicadores y texto why/how/tech para ítems del roadmap (producto Roadmappilot)
+Cliente web:  nunca llama a Anthropic directamente; usa la API BurnPilot con JWT
+```
+
+### Agente Roadmappilot externo (fase 2)
+
+```
+URL:          configurable (STACKOS_AGENT_URL) — POST server-to-server desde Railway
+Auth:         opcional STACKOS_AGENT_API_KEY como Bearer hacia el agente (no es el JWT del usuario)
+Uso:          POST /v1/stackos/agent — BFF: valida JWT Supabase, reenvía sobre JSON al agente (definición de funcionalidad, backlog, etc.)
+Contrato:     docs/stackos-spec.md § Fase 2; tipos @burnpilot/types (stackosAgent)
+```
+
 ---
 
 ## P4. ESTRUCTURA DE DATOS
@@ -119,9 +138,10 @@ Tablas principales (ver [docs/burnrate_plan.md §16](docs/burnrate_plan.md) para
 -- stripe_events: idempotencia de webhook
 -- alerts_dismissed: dismiss por usuario (alert_key puede contener project_id)
 -- recommended_stacks + recommended_stack_items: biblioteca curada MVP
+-- stackos_roadmaps + stackos_items: roadmap de producto Roadmappilot por proyecto (priorización MoSCoW)
 ```
 
-RLS activa en todas. `subscriptions_billing` y `stripe_events` solo las escribe `service_role` desde Railway. `categories`, `fx_rates`, `recommended_stacks*` lectura pública.
+RLS activa en todas. `subscriptions_billing` y `stripe_events` solo las escribe `service_role` desde Railway. `categories`, `fx_rates`, `recommended_stacks*` lectura pública. `stackos_*`: solo el dueño (`user_id` / roadmap del proyecto).
 
 ---
 
@@ -142,7 +162,8 @@ Privadas (RequireAuth):
   /tools              → Listado y CRUD de tools
   /projects           → Listado de proyectos
   /projects/:id       → Dashboard por proyecto
-  /stacks             → Biblioteca Recommended Stacks (SECONDARY Sprint 6)
+  /stacks             → Biblioteca Recommended Stacks (Sprint 6); `/stacks/library` redirige aquí
+  /roadmappilot       → Roadmappilot: roadmap por proyecto (score, MoSCoW, IA opcional); `/stacks/roadmap` y `/stackos` redirigen aquí
   /savings            → Plan de recorte priorizado
   /settings/account   → Email, password, moneda, presupuesto
   /settings/billing   → Gestión Stripe (Customer Portal)
@@ -183,6 +204,10 @@ Todos devuelven `{ ok: true, data }` o `{ ok: false, error, code }`.
 | POST | /webhooks/stripe | Firma | Procesa eventos Stripe (raw body, idempotente) |
 | POST | /cron/fx-refresh | x-cron-token | Refresco diario tasas FX |
 | POST | /mail/send | allowlist | Envío vía Resend |
+| POST | /stackos/analyze | JWT | Roadmappilot: ajuste IA de indicadores (rate limit 15/min) |
+| POST | /stackos/agent | JWT | Roadmappilot fase 2: proxy a agente HTTP externo (20/min; requiere STACKOS_AGENT_URL) |
+| POST | /tools/ai-enrich | JWT | Herramientas: IA sugiere notas, categoría (catálogo enviado), planes/precios orientativos y scores (15/min; Anthropic) |
+| POST | /tools/ai-suggest | JWT | Herramientas: IA lista sugerencias por categoría + búsqueda opcional; precios orientativos (15/min; Anthropic) |
 | DELETE | /me | JWT | Limpia Stripe + programa hard delete Supabase |
 
 ---
@@ -270,6 +295,14 @@ MARKETING_URL=http://localhost:5173
 CRON_SECRET=
 SENTRY_DSN=
 BETTER_STACK_SOURCE_TOKEN=
+
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
+
+# Roadmappilot — agente externo (fase 2). Ver docs/stackos-spec.md
+STACKOS_AGENT_URL=
+STACKOS_AGENT_API_KEY=
+STACKOS_AGENT_TIMEOUT_MS=55000
 ```
 
 ---

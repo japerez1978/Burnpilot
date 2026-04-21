@@ -7,7 +7,7 @@ SaaS spend optimizer para builders no técnicos. Monorepo gestionado con NPM Wor
   - `apps/web` — Frontend React + Vite (Netlify, `app.burnpilot.app`)
 - `apps/api` — Backend thin Express (Railway, `api.burnpilot.app`)
 - `packages/types` — Zod schemas y tipos compartidos front ↔ back
-- `packages/utils` — utilidades puras (money, fx, dates)
+- `packages/utils` — utilidades puras (money, fx, dates, **Roadmappilot / stackos scoring**)
 - `supabase/` — migraciones SQL + seeds + functions
 - `docs/` — plan maestro, STATUS operativo, runbook ([docs/burnpilot_plan.md](docs/burnpilot_plan.md), [docs/STATUS.md](docs/STATUS.md))
 

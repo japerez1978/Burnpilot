@@ -12,7 +12,7 @@ import { useSessionStore } from '@/store/sessionStore';
 
 type ProjectRow = { id: string; name: string };
 
-export function StacksPage() {
+export function StacksLibraryPage() {
   const user = useSessionStore((s) => s.session?.user);
   const configured = isSupabaseConfigured();
   const profileQuery = useProfileQuery();
@@ -72,7 +72,12 @@ export function StacksPage() {
         <p className="mt-2 max-w-2xl text-sm text-fg-muted">
           Biblioteca curada de combinaciones típicas de herramientas. Elige un proyecto, compara y, si falta una
           pieza, usa <strong className="font-medium text-fg-primary">Añadir sugerida</strong> para abrir el alta
-          en Herramientas con el nombre y el proyecto ya indicados.
+          en Herramientas con el nombre y el proyecto ya indicados. Para priorizar{' '}
+          <strong className="font-medium text-fg-primary">features de producto</strong> por proyecto, usa{' '}
+          <Link to="/roadmappilot" className="text-accent-green hover:underline">
+            Roadmappilot
+          </Link>
+          .
         </p>
       </header>
 
@@ -97,9 +102,7 @@ export function StacksPage() {
           ))}
         </select>
         {projectsQuery.data?.length === 0 ? (
-          <p className="mt-2 text-sm text-fg-muted">
-            Crea un proyecto desde la barra lateral para poder comparar.
-          </p>
+          <p className="mt-2 text-sm text-fg-muted">Crea un proyecto desde la barra lateral para poder comparar.</p>
         ) : null}
       </div>
 
@@ -122,9 +125,7 @@ export function StacksPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-fg-primary">{stack.name}</h2>
-                    {stack.description ? (
-                      <p className="mt-1 text-sm text-fg-muted">{stack.description}</p>
-                    ) : null}
+                    {stack.description ? <p className="mt-1 text-sm text-fg-muted">{stack.description}</p> : null}
                     <p className="mt-2 text-xs text-fg-muted">
                       Coste orientativo ~{formatCents(stack.monthly_estimate_cents, currency)}/mes
                       {stack.last_reviewed_at ? (
@@ -206,8 +207,7 @@ export function StacksPage() {
                       </tbody>
                     </table>
                     <p className="mt-3 text-xs text-fg-muted">
-                      La coincidencia es por nombre/vendor aproximado. Ajusta nombres en Herramientas si no
-                      encaja.
+                      La coincidencia es por nombre/vendor aproximado. Ajusta nombres en Herramientas si no encaja.
                     </p>
                   </div>
                 ) : null}
