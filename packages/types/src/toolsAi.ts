@@ -73,6 +73,8 @@ export const toolsAiScoresSchema = z.object({
 export const toolsAiEnrichDataSchema = z.object({
   notes: z.string().min(1).max(4000),
   categoryId: z.number().int().positive(),
+  /** URL oficial https (o dominio; el servidor puede normalizar). */
+  websiteUrl: z.string().max(2048).optional(),
   pricing: toolsAiPricingSchema,
   scores: toolsAiScoresSchema,
   disclaimer: z.string().min(1).max(500),
@@ -84,6 +86,7 @@ export const toolsAiSuggestionItemSchema = z.object({
   name: z.string().min(1).max(200),
   vendor: z.string().max(200).optional(),
   notes: z.string().min(1).max(2000),
+  websiteUrl: z.string().max(2048).optional(),
   categoryId: z.number().int().positive(),
   pricing: toolsAiPricingSchema,
   scores: toolsAiScoresSchema,

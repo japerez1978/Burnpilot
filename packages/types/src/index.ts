@@ -8,6 +8,41 @@ export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: 
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
-export * from './toolForm';
-export * from './stackosAgent';
-export * from './toolsAi';
+/** Reexportaciones explícitas: Rollup/Vite no siguen bien `export *` en salida CJS (`__exportStar`). */
+export {
+  assignmentModeSchema,
+  projectFormSchema,
+  toolFormSchema,
+  type ProjectFormValues,
+  type ToolFormValues,
+} from './toolForm';
+
+export {
+  stackosAgentActionSchema,
+  stackosAgentClientBodySchema,
+  stackosAgentSuggestedResponseSchema,
+  type StackosAgentAction,
+  type StackosAgentClientBody,
+  type StackosAgentClientBodyInput,
+  type StackosAgentSuggestedResponse,
+  type StackosAgentUpstreamEnvelope,
+} from './stackosAgent';
+
+export {
+  toolsAiCategoryListSchema,
+  toolsAiCategorySnapshotSchema,
+  toolsAiEnrichBodySchema,
+  toolsAiEnrichDataSchema,
+  toolsAiPricingPlanSchema,
+  toolsAiPricingSchema,
+  toolsAiScoresSchema,
+  toolsAiSuggestBodySchema,
+  toolsAiSuggestDataSchema,
+  toolsAiSuggestionItemSchema,
+  type ToolsAiCategorySnapshot,
+  type ToolsAiEnrichBody,
+  type ToolsAiEnrichData,
+  type ToolsAiSuggestBody,
+  type ToolsAiSuggestData,
+  type ToolsAiSuggestionItem,
+} from './toolsAi';

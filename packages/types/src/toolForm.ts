@@ -26,6 +26,25 @@ export const toolFormSchema = z
     state: z.enum(['active', 'trial', 'doubtful', 'to_cancel', 'canceled']),
     perceivedUsefulness: z.union([z.literal(''), z.enum(['1', '2', '3', '4', '5'])]),
     notes: z.string().max(4000).optional().or(z.literal('')),
+    websiteUrl: z
+      .string()
+      .max(2048)
+      .optional()
+      .or(z.literal(''))
+      .refine(
+        (s) => {
+          if (s == null || s === '') return true;
+          const raw = s.trim();
+          if (raw === '') return true;
+          try {
+            const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+            return u.protocol === 'http:' || u.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        },
+        { message: 'URL no válida (ej. https://ejemplo.com).' },
+      ),
     assignmentMode: assignmentModeSchema,
     singleProjectId: z.union([z.string().uuid(), z.literal(''), z.null()]).optional(),
     sharedAllocations: z

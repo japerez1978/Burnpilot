@@ -2,7 +2,7 @@
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npm run build -w @burnpilot/api"]
+cmds = ["npm run build:api"]
 
 [start]
 cmd = "node apps/api/dist/server.js"

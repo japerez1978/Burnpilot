@@ -24,10 +24,25 @@ import type { ToolsAiEnrichData } from '@burnpilot/types';
 
 type CategoryRow = { id: number; name: string; slug: string };
 type ProjectRow = { id: string; name: string };
+
+function websiteUrlForSupabase(raw: string | undefined | null): string | null {
+  const t = typeof raw === 'string' ? raw.trim() : '';
+  if (!t) return null;
+  try {
+    const href = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+    const u = new URL(href);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.href.length > 2048 ? u.href.slice(0, 2048) : u.href;
+  } catch {
+    return null;
+  }
+}
+
 export type ToolRow = {
   id: string;
   name: string;
   vendor: string | null;
+  website_url?: string | null;
   category_id: number;
   plan_label: string | null;
   amount_cents: number;
@@ -59,8 +74,13 @@ type Props = {
   editing: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
   /** Fila actual de `tools` (p. ej. tras refetch); evita datos obsoletos al fusionar `pending_*`. */
   editingLive?: (ToolRow & { project_tools?: ProjectToolEmbed[] | null }) | null;
-  /** Alta nueva desde Stacks u otra pantalla: nombre, proyecto y categoría opcionales. */
-  initialCreatePreset?: { name?: string; projectId?: string | null; categoryId?: number } | null;
+  /** Alta nueva desde Stacks u otra pantalla: nombre, proyecto, categoría y web opcionales. */
+  initialCreatePreset?: {
+    name?: string;
+    projectId?: string | null;
+    categoryId?: number;
+    websiteUrl?: string;
+  } | null;
   categories: CategoryRow[];
   projects: ProjectRow[];
 };
@@ -119,6 +139,7 @@ export function ToolFormModal({
       state: 'active',
       perceivedUsefulness: '',
       notes: '',
+      websiteUrl: '',
       assignmentMode: 'none',
       singleProjectId: null,
       sharedAllocations: [],
@@ -180,6 +201,7 @@ export function ToolFormModal({
           ? String(effective.perceived_usefulness)
           : '') as ToolFormValues['perceivedUsefulness'],
         notes: effective.notes ?? '',
+        websiteUrl: effective.website_url ?? '',
         assignmentMode: mode,
         singleProjectId: singleId,
         sharedAllocations: shared,
@@ -193,6 +215,9 @@ export function ToolFormModal({
     const presetCat = initialCreatePreset?.categoryId;
     const validPresetCat =
       typeof presetCat === 'number' && categories.some((c) => c.id === presetCat);
+    const presetWeb = initialCreatePreset?.websiteUrl?.trim();
+    const normalizedPresetWeb = presetWeb ? websiteUrlForSupabase(presetWeb) : null;
+    const websiteUrl = normalizedPresetWeb ?? '';
 
     reset({
       name: initialCreatePreset?.name ?? '',
@@ -206,6 +231,7 @@ export function ToolFormModal({
       state: 'active',
       perceivedUsefulness: '',
       notes: '',
+      websiteUrl,
       assignmentMode: hasPresetProject ? 'single' : 'none',
       singleProjectId: hasPresetProject ? presetPid! : null,
       sharedAllocations: [],
@@ -268,6 +294,7 @@ export function ToolFormModal({
         state: values.state,
         perceived_usefulness: perceived,
         notes: values.notes?.trim() || null,
+        website_url: websiteUrlForSupabase(values.websiteUrl),
       };
 
       const pendingClears = {
@@ -398,6 +425,9 @@ export function ToolFormModal({
       if (overwriteAiNotes) {
         setValue('notes', data.notes, { shouldValidate: true });
       }
+      if (data.websiteUrl) {
+        setValue('websiteUrl', data.websiteUrl, { shouldValidate: true });
+      }
       const firstPlan = data.pricing.plans[0];
       if (firstPlan?.name) {
         setValue('planLabel', firstPlan.name.slice(0, 120), { shouldValidate: true });
@@ -458,6 +488,21 @@ export function ToolFormModal({
                 Proveedor
               </label>
               <Input id="tf-vendor" {...register('vendor')} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-sm font-medium text-fg-primary" htmlFor="tf-web">
+                Sitio web (opcional)
+              </label>
+              <Input
+                id="tf-web"
+                inputMode="url"
+                placeholder="https://ejemplo.com o dominio.com"
+                autoComplete="url"
+                {...register('websiteUrl')}
+              />
+              {errors.websiteUrl ? (
+                <p className="text-sm text-accent-red">{errors.websiteUrl.message}</p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-fg-primary" htmlFor="tf-cat">
@@ -612,7 +657,7 @@ export function ToolFormModal({
               onClick={() => void handleAiEnrich()}
             >
               <Sparkles className="mr-1.5 inline h-4 w-4 text-purple-400" />
-              {aiBusy ? 'Consultando IA…' : 'Sugerir con IA (notas, categoría, planes)'}
+              {aiBusy ? 'Consultando IA…' : 'Sugerir con IA (notas, categoría, web, planes)'}
             </ButtonSecondary>
             {!canUseAi ? (
               <p className="text-xs text-fg-muted">
@@ -627,6 +672,18 @@ export function ToolFormModal({
                   Scores (1–100): precio {aiPreview.scores.precio} · eficacia {aiPreview.scores.eficacia} ·
                   sencillez {aiPreview.scores.sencillez}
                 </p>
+                {aiPreview.websiteUrl ? (
+                  <p>
+                    <a
+                      href={aiPreview.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-accent-green hover:underline"
+                    >
+                      Web sugerida (abrir)
+                    </a>
+                  </p>
+                ) : null}
                 <p className="text-fg-primary">{aiPreview.pricing.summary}</p>
                 {aiPreview.pricing.plans.length > 0 ? (
                   <ul className="list-inside list-disc space-y-0.5">

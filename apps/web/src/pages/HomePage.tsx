@@ -1,4 +1,4 @@
-import { Check, Flame, LineChart, Shield } from 'lucide-react';
+import { Check, Flame, LineChart, Map, Shield, Sparkles, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,8 @@ const compareRows: { label: string; burnpilot: string; other: string }[] = [
   },
   {
     label: 'Diferencial',
-    burnpilot: 'Burn rate, alertas, plan de recorte y stacks recomendados para makers.',
+    burnpilot:
+      'Burn rate, alertas, plan de recorte, stacks recomendados, roadmap de producto (Roadmappilot) e IA para enriquecer herramientas y explorar por categoría.',
     other: 'Agregación bancaria y crédito; menos foco en coste de herramientas B2B.',
   },
 ];
@@ -47,8 +48,11 @@ export function HomePage() {
           <span className="text-accent-green"> sin hojas de cálculo</span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-fg-muted">
-          Agrupa suscripciones por proyecto, detecta solapamientos y prioriza recortes. Pensado para quien
-          construye producto, no para reconciliar el banco.
+          Agrupa suscripciones por proyecto, detecta solapamientos y prioriza recortes. Incluye{' '}
+          <strong className="font-medium text-fg-primary">Roadmappilot</strong> para priorizar features con
+          scoring y MoSCoW, e <strong className="font-medium text-fg-primary">IA</strong> que sugiere notas,
+          categoría y planes orientativos al dar de alta herramientas. Pensado para quien construye producto,
+          no para reconciliar el banco.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           {session ? (
@@ -76,7 +80,7 @@ export function HomePage() {
       <section className="border-y border-bg-border bg-bg-elev/40 py-16">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-center text-2xl font-semibold text-fg-primary">Por qué BurnPilot</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-bg-border bg-bg-card p-6">
               <LineChart className="h-8 w-8 text-accent-green" strokeWidth={2} />
               <h3 className="mt-4 font-semibold text-fg-primary">Burn por proyecto</h3>
@@ -96,6 +100,26 @@ export function HomePage() {
               <h3 className="mt-4 font-semibold text-fg-primary">Stacks recomendados</h3>
               <p className="mt-2 text-sm text-fg-muted">
                 Biblioteca curada para comparar tu stack real frente a combinaciones típicas de indie makers.
+              </p>
+            </div>
+            <div className="rounded-xl border border-bg-border bg-bg-card p-6">
+              <Map className="h-8 w-8 text-accent-green" strokeWidth={2} />
+              <h3 className="mt-4 font-semibold text-fg-primary">Roadmappilot</h3>
+              <p className="mt-2 text-sm text-fg-muted">
+                Roadmap de producto por proyecto: indicadores, score, MoSCoW y flujo (activa, validada…).
+                Opción de ajustar con IA vía tu API (Anthropic).
+              </p>
+            </div>
+            <div className="rounded-xl border border-bg-border bg-bg-card p-6">
+              <div className="flex gap-2">
+                <Wrench className="h-8 w-8 text-accent-green" strokeWidth={2} />
+                <Sparkles className="h-8 w-8 text-purple-400" strokeWidth={2} />
+              </div>
+              <h3 className="mt-4 font-semibold text-fg-primary">Herramientas con IA</h3>
+              <p className="mt-2 text-sm text-fg-muted">
+                Al crear o editar una suscripción, la IA puede proponer notas, categoría del catálogo BurnPilot
+                y orientación de planes y precios (aproximados: confirma en la web del proveedor). Explora
+                sugerencias por categoría con puntuaciones de precio, eficacia y sencillez.
               </p>
             </div>
           </div>

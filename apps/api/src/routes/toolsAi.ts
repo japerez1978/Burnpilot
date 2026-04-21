@@ -26,6 +26,20 @@ function allowedCategoryIds(categories: { id: number }[]): Set<number> {
   return new Set(categories.map((c) => c.id));
 }
 
+/** Normaliza URL devuelta por el modelo (https, válida) o undefined. */
+function normalizeModelWebsiteUrl(raw: string | undefined): string | undefined {
+  const t = raw?.trim();
+  if (!t) return undefined;
+  const href = /^https?:\/\//i.test(t) ? t : `https://${t.replace(/^\/+/, '')}`;
+  try {
+    const u = new URL(href);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined;
+    return u.href.length > 2048 ? u.href.slice(0, 2048) : u.href;
+  } catch {
+    return undefined;
+  }
+}
+
 function resolveTargetCategoryId(
   body: { categoryId?: number; categorySlug?: string },
   categories: { id: number; slug: string }[],
@@ -145,10 +159,11 @@ Tarea:
 2) Elige la categoría más adecuada (categoryId entero de la lista).
 3) Resume planes y precios aproximados en EUR/USD como orientación (puede estar desactualizado): pricing.summary + pricing.plans[] con name, priceHint (texto corto, ej. "desde ~20 €/mes"), billing opcional (monthly/yearly/etc.).
 4) Tres scores enteros 1-100: precio (100=mejor relación calidad-precio o más barato para el caso típico indie), eficacia (100=muy útil para el objetivo), sencillez (100=muy fácil de usar).
-5) disclaimer: una frase legal en español: datos orientativos, verificar en la web oficial del proveedor.
+5) websiteUrl (opcional): URL https de la web oficial o pricing del producto; omite el campo si no estás seguro.
+6) disclaimer: una frase legal en español: datos orientativos, verificar en la web oficial del proveedor.
 
 Responde SOLO JSON válido, sin markdown:
-{"notes":"...","categoryId":<int>,"pricing":{"summary":"...","plans":[{"name":"...","priceHint":"...","billing":"..."}]},"scores":{"precio":<1-100>,"eficacia":<1-100>,"sencillez":<1-100>},"disclaimer":"..."}`;
+{"notes":"...","categoryId":<int>,"websiteUrl":"https://...","pricing":{"summary":"...","plans":[{"name":"...","priceHint":"...","billing":"..."}]},"scores":{"precio":<1-100>,"eficacia":<1-100>,"sencillez":<1-100>},"disclaimer":"..."}`;
 
   try {
     const out = await anthropicJsonPrompt(userPrompt, 1536);
@@ -163,7 +178,14 @@ Responde SOLO JSON válido, sin markdown:
       return;
     }
 
-    res.json({ ok: true, data: data.data });
+    const websiteUrl = normalizeModelWebsiteUrl(data.data.websiteUrl);
+    res.json({
+      ok: true,
+      data: {
+        ...data.data,
+        ...(websiteUrl ? { websiteUrl } : {}),
+      },
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     log('error', 'toolsAi.enrich', { message: msg });
@@ -228,6 +250,7 @@ Lista completa de categorías (referencia): ${catJson}
 
 Para cada sugerencia:
 - name, vendor (opcional), notes (breve, español)
+- websiteUrl (opcional): https de la web oficial; omite si no estás seguro
 - categoryId: DEBE ser siempre el entero ${targetId} (solo herramientas de esta categoría)
 - pricing: summary corto + plans[] con name, priceHint, billing opcional (precios ORIENTATIVOS)
 - scores: precio, eficacia, sencillez (1-100, mismo criterio que enriquecimiento)
@@ -235,7 +258,7 @@ Para cada sugerencia:
 Al final incluye disclaimer en español: datos orientativos, verificar precios en web oficial.
 
 Responde SOLO JSON válido:
-{"suggestions":[{"name":"...","vendor":"...","notes":"...","categoryId":${targetId},"pricing":{"summary":"...","plans":[...]},"scores":{"precio":n,"eficacia":n,"sencillez":n}}],"disclaimer":"..."}`;
+{"suggestions":[{"name":"...","vendor":"...","notes":"...","websiteUrl":"https://...","categoryId":${targetId},"pricing":{"summary":"...","plans":[...]},"scores":{"precio":n,"eficacia":n,"sencillez":n}}],"disclaimer":"..."}`;
 
   try {
     const out = await anthropicJsonPrompt(userPrompt, 2048);
@@ -253,7 +276,14 @@ Responde SOLO JSON válido:
     const suggestions = raw.data.suggestions
       .filter((s) => allowed.has(s.categoryId))
       .slice(0, b.limit)
-      .map((s) => ({ ...s, categoryId: targetId }));
+      .map((s) => {
+        const websiteUrl = normalizeModelWebsiteUrl(s.websiteUrl);
+        return {
+          ...s,
+          categoryId: targetId,
+          ...(websiteUrl ? { websiteUrl } : {}),
+        };
+      });
 
     if (suggestions.length === 0) {
       res.status(502).json({ ok: false, error: 'No valid suggestions from model', code: 'PARSE_ERROR' });

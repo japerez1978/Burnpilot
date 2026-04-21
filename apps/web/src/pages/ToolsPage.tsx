@@ -93,6 +93,7 @@ export function ToolsPage() {
     name?: string;
     projectId?: string;
     categoryId?: number;
+    websiteUrl?: string;
   } | null>(null);
   const [discoverCatId, setDiscoverCatId] = useState<number | null>(null);
   const [discoverQuery, setDiscoverQuery] = useState('');
@@ -355,12 +356,28 @@ export function ToolsPage() {
                             {s.scores.sencillez}
                           </p>
                           <p className="mt-1 text-xs text-fg-primary">{s.pricing.summary}</p>
+                          {s.websiteUrl ? (
+                            <p className="mt-1">
+                              <a
+                                href={s.websiteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-medium text-accent-green hover:underline"
+                              >
+                                Web sugerida
+                              </a>
+                            </p>
+                          ) : null}
                         </div>
                         <Button
                           type="button"
                           className="shrink-0"
                           onClick={() => {
-                            setCreatePreset({ name: s.name, categoryId: s.categoryId });
+                            setCreatePreset({
+                              name: s.name,
+                              categoryId: s.categoryId,
+                              websiteUrl: s.websiteUrl,
+                            });
                             setEditing(null);
                             setModalOpen(true);
                           }}
@@ -460,10 +477,11 @@ export function ToolsPage() {
         </p>
       ) : (
         <div className="mt-8 overflow-x-auto rounded-xl border border-bg-border">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[800px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-bg-border bg-bg-elev text-fg-muted">
                 <th className="px-4 py-3 font-medium">Nombre</th>
+                <th className="px-4 py-3 font-medium">Web</th>
                 <th className="px-4 py-3 font-medium">Categoría</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 text-center font-medium">Coste mensual (aprox.)</th>
@@ -474,13 +492,13 @@ export function ToolsPage() {
             <tbody>
               {rawTools.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-fg-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-fg-muted">
                     No hay herramientas aún. Pulsa <strong className="text-fg-primary">Añadir</strong>.
                   </td>
                 </tr>
               ) : displayedTools.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-fg-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-fg-muted">
                     Ninguna herramienta coincide con los estados seleccionados. Abre{' '}
                     <strong className="text-fg-primary">Filtrar por estado</strong> y marca al menos uno.
                   </td>
@@ -505,6 +523,20 @@ export function ToolsPage() {
                   return (
                     <tr key={row.id} className="border-b border-bg-border/80 hover:bg-bg-card/40">
                       <td className="px-4 py-3 font-medium text-fg-primary">{row.name}</td>
+                      <td className="px-4 py-3">
+                        {row.website_url ? (
+                          <a
+                            href={row.website_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent-green hover:underline"
+                          >
+                            Abrir
+                          </a>
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-fg-muted">{row.categories?.name ?? '—'}</td>
                       <td className={`px-4 py-3 text-sm ${stateClass}`}>{toolStateLabel(st)}</td>
                       <td className="px-4 py-3 text-center font-mono tabular-nums text-fg-primary">{monthlyLabel}</td>
