@@ -94,6 +94,20 @@ export function toolAccruesToBurn(row: {
 }
 
 /** Aproxima `public.tool_row_monthly_burn_cents` para listados (sin acceso a RPC). */
+export {
+  STACKOS_WEIGHTS,
+  buildStackosExportPrompt,
+  calcStackosMoscow,
+  calcStackosScore,
+  stackosMoscowLabel,
+  stackosWorkflowStateLabel,
+  type StackosIndicators,
+  type StackosMoscow,
+  type StackosPromptFeature,
+  type StackosScoringMode,
+  type StackosWorkflowState,
+} from './stackosScoring';
+
 export function toolRowMonthlyBurnCentsClient(row: {
   deleted_at?: string | null;
   state: string;

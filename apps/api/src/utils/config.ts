@@ -27,6 +27,19 @@ const ConfigSchema = z.object({
   CRON_SECRET: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
   BETTER_STACK_SOURCE_TOKEN: z.string().optional(),
+
+  /** Roadmappilot: análisis de ítems vía Anthropic (solo servidor). */
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().optional(),
+
+  /**
+   * Roadmappilot fase 2: URL completa del agente externo (POST JSON).
+   * Ej. https://tu-agente.railway.app/v1/stackos/agent
+   */
+  STACKOS_AGENT_URL: z.string().url().optional(),
+  /** Opcional: se envía como `Authorization: Bearer …` hacia el agente externo. */
+  STACKOS_AGENT_API_KEY: z.string().optional(),
+  STACKOS_AGENT_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).default(55_000),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

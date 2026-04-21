@@ -17,7 +17,8 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { SavingsPage } from '@/pages/SavingsPage';
 import { SettingsAccountPage } from '@/pages/SettingsAccountPage';
 import { SettingsBillingPage } from '@/pages/SettingsBillingPage';
-import { StacksPage } from '@/pages/StacksPage';
+import { StackosRoadmapPage } from '@/pages/StackosRoadmapPage';
+import { StacksLibraryPage } from '@/pages/StacksLibraryPage';
 import { ProjectDashboardPage } from '@/pages/ProjectDashboardPage';
 import { ToolsPage } from '@/pages/ToolsPage';
 
@@ -53,7 +54,11 @@ export function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/projects/:id" element={<ProjectDashboardPage />} />
             <Route path="/tools" element={<ToolsPage />} />
-            <Route path="/stacks" element={<StacksPage />} />
+            <Route path="/stacks/library" element={<Navigate to="/stacks" replace />} />
+            <Route path="/stacks/roadmap" element={<Navigate to="/roadmappilot" replace />} />
+            <Route path="/stackos" element={<Navigate to="/roadmappilot" replace />} />
+            <Route path="/stacks" element={<StacksLibraryPage />} />
+            <Route path="/roadmappilot" element={<StackosRoadmapPage />} />
             <Route path="/savings" element={<SavingsPage />} />
             <Route path="/settings/account" element={<SettingsAccountPage />} />
             <Route path="/settings/billing" element={<SettingsBillingPage />} />
