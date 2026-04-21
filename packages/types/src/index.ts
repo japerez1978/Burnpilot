@@ -10,3 +10,4 @@ export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 export * from './toolForm';
 export * from './stackosAgent';
+export * from './toolsAi';

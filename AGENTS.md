@@ -206,6 +206,8 @@ Todos devuelven `{ ok: true, data }` o `{ ok: false, error, code }`.
 | POST | /mail/send | allowlist | Envío vía Resend |
 | POST | /stackos/analyze | JWT | Roadmappilot: ajuste IA de indicadores (rate limit 15/min) |
 | POST | /stackos/agent | JWT | Roadmappilot fase 2: proxy a agente HTTP externo (20/min; requiere STACKOS_AGENT_URL) |
+| POST | /tools/ai-enrich | JWT | Herramientas: IA sugiere notas, categoría (catálogo enviado), planes/precios orientativos y scores (15/min; Anthropic) |
+| POST | /tools/ai-suggest | JWT | Herramientas: IA lista sugerencias por categoría + búsqueda opcional; precios orientativos (15/min; Anthropic) |
 | DELETE | /me | JWT | Limpia Stripe + programa hard delete Supabase |
 
 ---
