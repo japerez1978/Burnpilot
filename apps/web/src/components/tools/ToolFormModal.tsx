@@ -18,6 +18,13 @@ import { useProfileQuery } from '@/hooks/useProfileQuery';
 import { fetchToolsAiEnrich } from '@/lib/toolsAiApi';
 import { mergePendingTool } from '@/lib/mergePendingTool';
 import { parseMajorToCents } from '@/lib/money';
+import {
+  formatToolsAiPricingNotes,
+  majorToFormAmount,
+  parseMajorEuroFromHint,
+  periodicityFromBilling,
+  pickPlanForForm,
+} from '@/lib/toolsAiEnrichApply';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useSessionStore } from '@/store/sessionStore';
 import type { ToolsAiEnrichData } from '@burnpilot/types';
@@ -114,6 +121,8 @@ export function ToolFormModal({
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<ToolsAiEnrichData | null>(null);
   const [overwriteAiNotes, setOverwriteAiNotes] = useState(true);
+  /** Añade resumen de precios IA al campo Notas (se guarda al enviar el formulario). */
+  const [includeAiPricingNotes, setIncludeAiPricingNotes] = useState(true);
   /** Misma fuente que el resto de la app — no usar otra query con la misma key (pisaba onboarding_completed_at). */
   const profileQuery = useProfileQuery();
 
@@ -159,6 +168,7 @@ export function ToolFormModal({
       setAiError(null);
       setAiPreview(null);
       setOverwriteAiNotes(true);
+      setIncludeAiPricingNotes(true);
     }
   }, [open]);
 
@@ -422,16 +432,34 @@ export function ToolFormModal({
         categories,
       });
       setValue('categoryId', data.categoryId, { shouldValidate: true });
-      if (overwriteAiNotes) {
-        setValue('notes', data.notes, { shouldValidate: true });
-      }
       if (data.websiteUrl) {
         setValue('websiteUrl', data.websiteUrl, { shouldValidate: true });
       }
-      const firstPlan = data.pricing.plans[0];
-      if (firstPlan?.name) {
-        setValue('planLabel', firstPlan.name.slice(0, 120), { shouldValidate: true });
+
+      const plan = pickPlanForForm(data.pricing.plans);
+      if (plan) {
+        setValue('planLabel', plan.name.slice(0, 120), { shouldValidate: true });
+        setValue('periodicity', periodicityFromBilling(plan.billing), { shouldValidate: true });
+        const major = parseMajorEuroFromHint(plan.priceHint);
+        if (major != null) {
+          setValue('amount', majorToFormAmount(major), { shouldValidate: true });
+        }
       }
+
+      const pricingBlock = formatToolsAiPricingNotes(data);
+      if (includeAiPricingNotes) {
+        const cur = (getValues('notes') ?? '').trim();
+        if (overwriteAiNotes) {
+          setValue('notes', `${data.notes.trim()}\n\n${pricingBlock}`.trim(), { shouldValidate: true });
+        } else if (cur) {
+          setValue('notes', `${cur}\n\n${pricingBlock}`, { shouldValidate: true });
+        } else {
+          setValue('notes', `${data.notes.trim()}\n\n${pricingBlock}`.trim(), { shouldValidate: true });
+        }
+      } else if (overwriteAiNotes) {
+        setValue('notes', data.notes, { shouldValidate: true });
+      }
+
       setAiPreview(data);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'IA no disponible.');
@@ -649,6 +677,15 @@ export function ToolFormModal({
                 onChange={(e) => setOverwriteAiNotes(e.target.checked)}
               />
               Sobrescribir notas con el texto sugerido
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+              <input
+                type="checkbox"
+                className="rounded border-bg-border text-accent-green focus:ring-accent-green"
+                checked={includeAiPricingNotes}
+                onChange={(e) => setIncludeAiPricingNotes(e.target.checked)}
+              />
+              Guardar precios y puntuación IA en Notas (persisten al guardar)
             </label>
             <ButtonSecondary
               type="button"
