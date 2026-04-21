@@ -67,6 +67,9 @@ const apiKeys = [
   'MARKETING_URL',
 ];
 
+/** Opcional: varios orígenes CORS (coma). */
+const apiOptionalExtra = ['ALLOWED_ORIGINS'];
+
 function isEmpty(v) {
   return v === undefined || v === null || String(v).trim() === '';
 }
@@ -145,6 +148,7 @@ const webOk = checkSection(
   webOptional,
 );
 const apiOk = checkSection('API (Railway)', 'apps/api/.env', apiKeys, [
+  ...apiOptionalExtra,
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
   'CRON_SECRET',

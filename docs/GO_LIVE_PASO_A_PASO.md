@@ -52,13 +52,44 @@ Lo que ves en local (herramientas, proyectos, filas en tablas) vive en **tu** in
 
 ## 2. API en Railway (primero la API)
 
-1. [Railway](https://railway.app) → servicio del backend (raíz del repo o `apps/api` según lo tengas).
-2. **Variables** → crea una fila por cada clave de `apps/api/.env` que ya pasó `go-live:check`, en especial:
-   - `ALLOWED_ORIGIN` = `https://app.burnpilot.app` (exactamente el origen del front; CORS).
-   - `APP_URL` y `MARKETING_URL` = URL pública del front.
-   - `SUPABASE_*` y `STRIPE_*` iguales que en local pero en modo **live** cuando toque.
-3. **Deploy** → espera build verde. Abre la URL pública de Railway + `/health` → debe responder OK.
-4. Anota la URL pública definitiva, p. ej. `https://api.burnpilot.app` → es la que pondrás en `VITE_API_URL` en Netlify.
+1. **Repo y build:** el backend espera el **monorepo en la raíz** (donde están `railway.json`, `nixpacks.toml` y `packages/`). El build debe ejecutar `npm run build:api` (types + utils + API); el arranque es `node apps/api/dist/server.js`. Si en Railway el servicio tenía **Root Directory** en `apps/api`, cámbialo a la raíz del repo para que ese pipeline sea el que corre.
+2. **Variables de entorno:** en [Railway](https://railway.app) → tu servicio **API** → **Variables**.
+
+   **Forma rápida:** en tu Mac (después de `go-live:check`):
+
+   ```bash
+   npm run env:deploy-hints -- --railway
+   ```
+
+   Copia cada línea `CLAVE=valor` al panel (o usa el editor masivo si tu plan lo permite). **No** subas el archivo `.env` al repo.
+
+   **Checklist** (mismos nombres que `apps/api/.env.example`; ajusta URLs a **https** y dominios reales):
+
+   | Variable | Notas |
+   |----------|--------|
+   | `NODE_ENV` | `production` |
+   | `LOG_LEVEL` | p. ej. `info` |
+   | `PORT` | Suele inyectarla Railway; si no, `3000` |
+   | `ALLOWED_ORIGIN` | Un origen del front (sin barra final). Si solo tienes un dominio en prod, basta. |
+   | `ALLOWED_ORIGINS` | **Opcional:** varios dominios separados por **coma** si el front responde en apex y subdominio (p. ej. `https://burnpilot.app,https://www.burnpilot.app,https://app.burnpilot.app`). Evita CORS cuando Netlify usa `burnpilot.app` y tenías solo `app.burnpilot.app` en `ALLOWED_ORIGIN`. |
+   | `APP_URL` | URL pública del front (misma idea que Netlify). |
+   | `MARKETING_URL` | Igual que `APP_URL` si solo tienes una web. |
+   | `SUPABASE_URL` | Igual que en Supabase → Settings → API (y que `VITE_SUPABASE_URL`). |
+   | `SUPABASE_ANON_KEY` | Igual que `VITE_SUPABASE_ANON_KEY`. |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Solo servidor; nunca en el front. |
+   | `SUPABASE_JWT_SECRET` | Settings → API → JWT Secret (proyecto correcto). |
+   | `STRIPE_SECRET_KEY` | Modo test o **live** según fase. |
+   | `STRIPE_WEBHOOK_SECRET` | Del webhook que apunte a **esta** API (`/webhooks/stripe`). |
+   | `STRIPE_PRICE_ID_PRO_MONTHLY` / `YEARLY` / `LIFETIME` | IDs de precios en Stripe. |
+   | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Si envías email desde la API. |
+   | `CRON_SECRET` | Si usas cron firmado. |
+   | `SENTRY_DSN` / `BETTER_STACK_SOURCE_TOKEN` | Opcional, observabilidad. |
+   | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | Para Roadmappilot / IA en Herramientas (`/v1/tools/ai-*`). Sin esto, esos endpoints responden 503. |
+
+   Opcionales avanzados: `STACKOS_AGENT_URL`, `STACKOS_AGENT_API_KEY`, `STACKOS_AGENT_TIMEOUT_MS` (agente HTTP externo).
+
+3. **Deploy** → espera build verde. Abre la URL pública del servicio + `/health` → debe responder OK (JSON con `ok`).
+4. Anota la URL HTTPS definitiva (p. ej. `https://api.burnpilot.app`) → es la que pondrás en **`VITE_API_URL`** en Netlify (sección 3).
 
 ---
 
@@ -107,6 +138,6 @@ Los `.env` locales **no** se suben a Git: hay que copiarlos a mano (o con el scr
 
 ## Si algo falla
 
-- **CORS en el front:** `ALLOWED_ORIGIN` en Railway debe ser exactamente `https://tu-dominio-front` sin barra final.
+- **CORS en el front:** el origen del navegador (p. ej. `https://burnpilot.app`) debe estar en `ALLOWED_ORIGIN` o en la lista `ALLOWED_ORIGINS` (coma, sin espacios). Comprueba en DevTools → red el valor exacto del header `Origin`.
 - **Build Netlify sin Supabase:** faltan `VITE_*` en entorno de build o no redeploy tras cambiarlas.
 - Más: [docs/runbook.md](runbook.md). Tras el despliegue, referencia **sin secretos:** [production_environment.md](production_environment.md).

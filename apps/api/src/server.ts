@@ -15,6 +15,17 @@ import { toolsAiRouter } from './routes/toolsAi';
 const config = loadConfig();
 const app = express();
 
+/** Orígenes del front permitidos por CORS (producción: varios dominios Netlify / apex). */
+function corsAllowedList(): string[] {
+  const extra = config.ALLOWED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+  if (extra.length > 0) {
+    const set = new Set<string>([config.ALLOWED_ORIGIN, ...extra]);
+    return [...set];
+  }
+  return [config.ALLOWED_ORIGIN];
+}
+const productionOrigins = corsAllowedList();
+
 /** Orígenes típicos en local (localhost vs 127.0.0.1) para evitar CORS al probar el front. */
 const devViteOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
@@ -28,7 +39,7 @@ app.use(
         callback(null, true);
         return;
       }
-      if (origin === config.ALLOWED_ORIGIN) {
+      if (productionOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
@@ -65,6 +76,6 @@ app.listen(config.PORT, '0.0.0.0', () => {
   log('info', 'server.started', {
     port: config.PORT,
     env: config.NODE_ENV,
-    allowedOrigin: config.ALLOWED_ORIGIN,
+    allowedOrigins: productionOrigins,
   });
 });

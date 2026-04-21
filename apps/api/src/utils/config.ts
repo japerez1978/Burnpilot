@@ -4,7 +4,14 @@ const ConfigSchema = z.object({
   NODE_ENV: z.string().default('development'),
   LOG_LEVEL: z.enum(['info', 'warn', 'error']).default('info'),
   PORT: z.coerce.number().int().positive().default(3000),
+  /** Un solo origen del front (CORS). Si usas varios dominios, usa ALLOWED_ORIGINS. */
   ALLOWED_ORIGIN: z.string().url().default('http://localhost:5173'),
+  /**
+   * Orígenes CORS adicionales, separados por coma (sin espacios problemáticos).
+   * Ej. https://burnpilot.app,https://www.burnpilot.app,https://app.burnpilot.app
+   * Si está vacío, solo cuenta ALLOWED_ORIGIN.
+   */
+  ALLOWED_ORIGINS: z.string().optional(),
 
   SUPABASE_URL: z.string().url().optional(),
   /** Misma que VITE_SUPABASE_ANON_KEY en la web; valida el JWT del usuario en rutas con Bearer. */

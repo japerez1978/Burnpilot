@@ -12,7 +12,7 @@ MVP desplegado y probado end-to-end: **web (Netlify)** ↔ **Supabase (Auth + Po
 | Capa | Servicio / rol | Notas |
 |------|-----------------|--------|
 | Frontend | Netlify | Build: `npm ci && npm run build:web`; publish `apps/web/dist`. Ver `netlify.toml` en la **raíz** del monorepo (Base directory del sitio vacío). |
-| API | Railway | Servicio Node (`@burnpilot/api`); arranque `node apps/api/dist/server.js`. Ver `railway.json` en raíz. |
+| API | Railway | Monorepo en **raíz**; build `npm run build:api`; arranque `node apps/api/dist/server.js`. Ver `railway.json` y `nixpacks.toml`. Variables: [GO_LIVE §2](GO_LIVE_PASO_A_PASO.md#2-api-en-railway-primero-la-api). |
 | Dominio API | `api.burnpilot.app` | HTTPS; health: `GET /health` → JSON `ok`, `service: burnpilot-api`. |
 | Auth + DB | Supabase | Proyecto dedicado; migraciones `supabase/migrations/` en orden. |
 | Pagos | Stripe | Webhook **POST** ruta fija: **`/webhooks/stripe`** (no `/api/...`). Modo test o live según fase. |
@@ -40,7 +40,7 @@ Validación local antes de copiar: `npm run go-live:check` y `npm run go-live:ch
 
 ## CORS (API)
 
-- **`ALLOWED_ORIGIN`** en Railway debe ser **exactamente** el origen del front (esquema + host, sin path; sin barra final salvo que el código espere otra cosa).
+- **CORS:** `ALLOWED_ORIGIN` y/o **`ALLOWED_ORIGINS`** (lista separada por coma) en Railway deben incluir **cada** origen desde el que sirves el front (apex, `www`, subdominio `app`, etc.), esquema + host, sin path ni barra final.
 
 ## Documentación relacionada
 
