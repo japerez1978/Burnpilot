@@ -1,23 +1,2 @@
-# Netlify build config for BurnPilot web app (monorepo NPM Workspaces)
-# Variables VITE_*: Site settings → Environment variables (ver docs/GO_LIVE_PASO_A_PASO.md)
-
-[build]
-  base = ""
-  command = "npm ci && npm run build -w @burnpilot/web"
-  publish = "apps/web/dist"
-
-[build.environment]
-  NODE_VERSION = "20"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+# Config movida a la raíz del monorepo: /netlify.toml
+# En Netlify, deja "Base directory" vacío para usar ese archivo.

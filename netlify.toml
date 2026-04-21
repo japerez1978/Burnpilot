@@ -1,0 +1,23 @@
+# BurnPilot web (monorepo). Build desde la RAÍZ del repo (NPM workspaces).
+# Netlify → Site configuration → Build: Base directory vacío; Publish = apps/web/dist (o déjalo inferido aquí).
+# VITE_* en Environment variables (ver docs/GO_LIVE_PASO_A_PASO.md).
+
+[build]
+  command = "npm ci && npm run build:web"
+  publish = "apps/web/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
