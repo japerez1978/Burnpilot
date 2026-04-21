@@ -332,8 +332,8 @@ export function ToolsPage() {
             </div>
             {!import.meta.env.VITE_API_URL?.trim() || !session?.access_token ? (
               <p className="text-xs text-fg-muted">
-                Requiere sesión y <code className="font-mono">VITE_API_URL</code> apuntando a la API con{' '}
-                <code className="font-mono">ANTHROPIC_API_KEY</code>.
+                Requiere sesión y <code className="font-mono">VITE_API_URL</code> en Netlify. La clave de Anthropic va en{' '}
+                <strong className="text-fg-primary">Railway</strong> como <code className="font-mono">ANTHROPIC_API_KEY</code>, no en el front.
               </p>
             ) : null}
             {discoverError ? <p className="text-sm text-accent-amber">{discoverError}</p> : null}

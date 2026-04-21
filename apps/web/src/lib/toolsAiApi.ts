@@ -9,6 +9,18 @@ import type {
 const ENRICH_PATH = '/v1/tools/ai-enrich';
 const SUGGEST_PATH = '/v1/tools/ai-suggest';
 
+type ToolsAiErrJson = { ok?: boolean; error?: string; code?: string };
+
+function toolsAiUserError(res: Response, json: ToolsAiErrJson): Error {
+  const raw = json.error ?? `Error (${res.status})`;
+  if (json.code === 'NOT_CONFIGURED' || raw.includes('ANTHROPIC_API_KEY')) {
+    return new Error(
+      'IA no configurada en el servidor: añade ANTHROPIC_API_KEY en Railway (Variables del servicio API), redeploy, y vuelve a intentar. No se configura en Netlify.',
+    );
+  }
+  return new Error(raw);
+}
+
 export async function fetchToolsAiEnrich(
   apiBase: string,
   accessToken: string,
@@ -23,9 +35,9 @@ export async function fetchToolsAiEnrich(
     },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as { ok?: boolean; data?: ToolsAiEnrichData; error?: string };
+  const json = (await res.json()) as ToolsAiErrJson & { data?: ToolsAiEnrichData };
   if (!res.ok || !json.ok || !json.data) {
-    throw new Error(json.error ?? `Enrich failed (${res.status})`);
+    throw toolsAiUserError(res, json);
   }
   return json.data;
 }
@@ -48,13 +60,9 @@ export async function fetchToolsAiSuggest(
     },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as {
-    ok?: boolean;
-    data?: ToolsAiSuggestResponse;
-    error?: string;
-  };
+  const json = (await res.json()) as ToolsAiErrJson & { data?: ToolsAiSuggestResponse };
   if (!res.ok || !json.ok || !json.data) {
-    throw new Error(json.error ?? `Suggest failed (${res.status})`);
+    throw toolsAiUserError(res, json);
   }
   return json.data;
 }
